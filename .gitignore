@@ -1,0 +1,69 @@
+﻿# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+artifacts/
+.artifacts/
+
+# Logs / temporary files
+*.log
+*.tmp
+*.tlog
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Test results / coverage
+[Tt]est[Rr]esult*/
+*.trx
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.coveragexml
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+*.mdf
+*.ldf
+
+# Secrets / local environment
+.env
+.env.*
+!.env.example
+
+# Certificates / private keys
+*.pfx
+*.p12
+*.key
+
+# Publish output/settings
+publish/
+*.pubxml
+*.publishproj
+PublishScripts/
+
+# Local GitHub CLI config for this repository
+.gh-local/
+
+# OS/editor miscellany
+Thumbs.db
+Desktop.ini
