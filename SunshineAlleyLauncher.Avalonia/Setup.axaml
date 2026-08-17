@@ -1,0 +1,153 @@
+<Window xmlns="https://github.com/avaloniaui"
+
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+
+        x:Class="SunshineAlleyLauncher.Avalonia.Setup"
+
+        Title="Setup"
+
+        Width="800"
+
+        Height="450"
+
+        CanResize="False"
+
+        Icon="/res/SA.ico">
+
+    <Canvas>
+
+        <Image
+        x:Name="backgroundImage"
+        Source="/res/vikingarms.jpg"
+        Canvas.Left="0"
+        Canvas.Top="0"
+        Width="800"
+        Height="450"
+        Stretch="Fill"
+        IsHitTestVisible="False"/>
+
+        <TextBlock
+            x:Name="labelTitle"
+            Text="Sunshine Alley Setup"
+            Canvas.Left="141"
+            Canvas.Top="31"
+            Foreground="Gold"
+            FontSize="34"
+            FontWeight="Bold"/>
+
+        <RadioButton
+            x:Name="radioButtonInstall"
+            Content="Install"
+            Canvas.Left="12"
+            Canvas.Top="114"
+            FontSize="15.75"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <RadioButton
+            x:Name="radioButtonRepair"
+            Content="Repair"
+            Canvas.Left="12"
+            Canvas.Top="150"
+            FontSize="15.75"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <RadioButton
+            x:Name="radioButtonUninstall"
+            Content="Uninstall"
+            Canvas.Left="12"
+            Canvas.Top="186"
+            FontSize="15.75"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <RadioButton
+            x:Name="radioButtonShortcuts"
+            Content="I just want shortcuts"
+            Canvas.Left="12"
+            Canvas.Top="222"
+            FontSize="15.75"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <CheckBox
+            x:Name="checkBoxShortcutStartMenu"
+            Content="Create Start Menu shortcut"
+            Canvas.Left="48"
+            Canvas.Top="258"
+            IsChecked="True"
+            FontSize="12"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <CheckBox
+            x:Name="checkBoxShortcutDesktop"
+            Content="Create Desktop shortcut"
+            Canvas.Left="48"
+            Canvas.Top="294"
+            IsChecked="True"
+            FontSize="12"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <TextBlock
+            x:Name="labelGameDirectory"
+            Text="Game Directory:"
+            Canvas.Left="344"
+            Canvas.Top="216"
+            FontSize="12"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <TextBlock
+            x:Name="labelGameDirectoryPath"
+            Text="c:\Program Files\Steam"
+            Canvas.Left="460"
+            Canvas.Top="216"
+            FontSize="12"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <TextBlock
+            x:Name="labelInstallDirectory"
+            Text="Install Directory:"
+            Canvas.Left="344"
+            Canvas.Top="249"
+            FontSize="12"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <TextBlock
+            x:Name="labelInstallDirectoryPath"
+            Text="c:\Users\Local"
+            Canvas.Left="460"
+            Canvas.Top="249"
+            FontSize="12"
+            Foreground="White"
+            Background="#64323232"/>
+
+        <ProgressBar
+            x:Name="progressBar1"
+            Canvas.Left="12"
+            Canvas.Top="368"
+            Width="776"
+            Height="23"
+            Minimum="0"
+            Maximum="100"
+            Value="0"/>
+
+        <Button
+            x:Name="buttonNext"
+            Content="Next"
+            Canvas.Left="657"
+            Canvas.Top="397"
+            Width="131"
+            Height="41"
+            FontSize="15.75"
+            Foreground="White"
+            Background="#BE325AC0"/>
+
+    </Canvas>
+
+</Window>
