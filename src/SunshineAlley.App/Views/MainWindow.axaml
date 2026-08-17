@@ -1,0 +1,132 @@
+<Window
+    x:Class="SunshineAlley.App.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:SunshineAlley.App.ViewModels"
+    x:DataType="vm:MainWindowViewModel"
+    Title="Sunshine Alley Launcher"
+    Width="760"
+    Height="650"
+    MinWidth="650"
+    MinHeight="590"
+    Icon="/Assets/SA.ico"
+    WindowStartupLocation="CenterScreen">
+  <Grid>
+    <Image
+        Source="/Assets/vikingship.png"
+        Stretch="UniformToFill"
+        Opacity="0.16" />
+    <Border Background="#B80D1416" />
+
+    <Grid Margin="34" RowDefinitions="Auto,*,Auto">
+      <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,22">
+        <StackPanel>
+          <TextBlock
+              Text="SUNSHINE ALLEY"
+              FontSize="29"
+              FontWeight="Bold"
+              Foreground="#F0B548" />
+          <TextBlock
+              Text="VALHEIM LAUNCHER"
+              FontSize="13"
+              LetterSpacing="3"
+              Classes="muted" />
+        </StackPanel>
+        <Button
+            Grid.Column="1"
+            Classes="secondary"
+            Content="Settings"
+            Click="Settings_Click" />
+      </Grid>
+
+      <Border Grid.Row="1" Classes="card">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+          <TextBlock Text="Launch option" FontSize="13" Classes="muted" />
+          <ComboBox
+              Grid.Row="1"
+              Margin="0,7,0,18"
+              MinHeight="42"
+              ItemsSource="{Binding Servers}"
+              SelectedItem="{Binding SelectedServer}" />
+
+          <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+            <StackPanel>
+              <TextBlock Text="Game directory" FontSize="13" Classes="muted" />
+              <TextBlock
+                  Text="{Binding GameDirectory}"
+                  TextTrimming="CharacterEllipsis"
+                  ToolTip.Tip="{Binding GameDirectory}" />
+            </StackPanel>
+            <Button
+                Grid.Column="1"
+                Classes="secondary"
+                Content="Open data"
+                Click="OpenData_Click" />
+          </Grid>
+
+          <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="24" Margin="0,0,0,14">
+            <CheckBox Content="Launch with Steam" IsChecked="{Binding UseSteam}" />
+            <CheckBox
+                Content="Persistent profile"
+                IsChecked="{Binding Persistent}"
+                ToolTip.Tip="Windows is automatic. Linux and macOS require the one-time Steam wrapper launch option shown by the launcher." />
+          </StackPanel>
+
+          <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,15">
+            <Button
+                HorizontalAlignment="Left"
+                Background="Transparent"
+                Foreground="#E8A93A"
+                Content="{Binding OptionalModsText}"
+                IsEnabled="{Binding CanManageOptionalMods}"
+                Click="OptionalMods_Click" />
+            <Button
+                Grid.Column="1"
+                Classes="secondary"
+                Margin="8,0"
+                Content="Verify files"
+                Command="{Binding VerifyCommand}" />
+            <Button
+                Grid.Column="2"
+                Classes="secondary"
+                Content="Refresh"
+                Command="{Binding RefreshCommand}" />
+          </Grid>
+
+          <StackPanel Grid.Row="5" VerticalAlignment="Bottom">
+            <Border
+                Background="#D0442527"
+                CornerRadius="6"
+                Padding="12"
+                Margin="0,0,0,12"
+                IsVisible="{Binding HasNotice}">
+              <TextBlock Text="{Binding Notice}" TextWrapping="Wrap" Foreground="#FFD7D3" />
+            </Border>
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+            <ProgressBar
+                Margin="0,8,0,0"
+                Minimum="0"
+                Maximum="100"
+                Value="{Binding ProgressValue}"
+                IsVisible="{Binding IsProgressVisible}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,20,0,0">
+        <TextBlock
+            VerticalAlignment="Center"
+            Text="{Binding DeviceIdentityNote}"
+            Classes="muted"
+            FontSize="11"
+            TextWrapping="Wrap" />
+        <Button
+            Grid.Column="1"
+            Classes="primary"
+            MinWidth="150"
+            Content="PLAY"
+            Command="{Binding PlayCommand}" />
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>

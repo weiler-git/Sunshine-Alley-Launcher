@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>sunshine-alley-cli</AssemblyName>
+    <Description>Cross-platform diagnostic, verification, and Valheim launch harness.</Description>
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SunshineAlley.Core\SunshineAlley.Core.csproj" />
+    <ProjectReference Include="..\SunshineAlley.Platform\SunshineAlley.Platform.csproj" />
+  </ItemGroup>
+</Project>

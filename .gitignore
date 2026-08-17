@@ -1,69 +1,36 @@
-﻿# Visual Studio
-.vs/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-*.rsuser
-
 # Build output
-[Bb]in/
-[Oo]bj/
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
+bin/
+obj/
 artifacts/
-.artifacts/
+TestResults/
 
-# Logs / temporary files
+# IDE state
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local launcher state and downloaded modpacks
+settings.json
 *.log
-*.tmp
-*.tlog
+ModPacks/
+.sunshine-alley-backup/
 
-# NuGet
-*.nupkg
-*.snupkg
-**/[Pp]ackages/*
-!**/[Pp]ackages/build/
-*.nuget.props
-*.nuget.targets
-
-# Test results / coverage
-[Tt]est[Rr]esult*/
-*.trx
-coverage*.json
-coverage*.xml
-coverage*.info
-*.coverage
-*.coveragexml
-
-# Local databases
-*.db
-*.db-shm
-*.db-wal
-*.mdf
-*.ldf
-
-# Secrets / local environment
-.env
-.env.*
-!.env.example
-
-# Certificates / private keys
+# Signing material must be supplied by CI or the release operator
 *.pfx
 *.p12
+*.cer
 *.key
+*.mobileprovision
 
-# Publish output/settings
-publish/
-*.pubxml
-*.publishproj
-PublishScripts/
-
-# Local GitHub CLI config for this repository
-.gh-local/
-
-# OS/editor miscellany
-Thumbs.db
-Desktop.ini
+# Generated packages
+*.dmg
+*.msix
+*.pkg
+*.AppImage
+*.tar.gz

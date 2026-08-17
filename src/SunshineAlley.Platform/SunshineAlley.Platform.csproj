@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Windows, Linux, and macOS implementations for launcher platform services.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SunshineAlley.Core\SunshineAlley.Core.csproj" />
+  </ItemGroup>
+</Project>

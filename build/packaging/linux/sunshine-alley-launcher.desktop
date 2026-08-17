@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Sunshine Alley Launcher
+Comment=Launch Valheim with Sunshine Alley modpacks
+Exec=/opt/sunshine-alley/SunshineAlleyLauncher
+Icon=sunshine-alley-launcher
+Terminal=false
+Categories=Game;

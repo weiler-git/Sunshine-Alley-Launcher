@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Platform-neutral launcher, API, mod synchronization, hashing, and identity logic.</Description>
+  </PropertyGroup>
+</Project>

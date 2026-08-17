@@ -1,9 +1,16 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31402.337
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sunshine Alley Launcher", "Sunshine Alley Launcher\Sunshine Alley Launcher.csproj", "{7E1E6F20-843F-483A-9B55-C857435BBAE7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SunshineAlley.Core", "src\SunshineAlley.Core\SunshineAlley.Core.csproj", "{9B625A4D-2062-4E3C-9729-ED5AD5552801}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SunshineAlley.Platform", "src\SunshineAlley.Platform\SunshineAlley.Platform.csproj", "{6C15D916-D237-49D2-8F35-36A1B8A3CD72}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SunshineAlley.App", "src\SunshineAlley.App\SunshineAlley.App.csproj", "{0AF490BA-4DCB-48EC-8D1B-E5E669B9B9FD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SunshineAlley.Cli", "src\SunshineAlley.Cli\SunshineAlley.Cli.csproj", "{B57135BB-B68D-4213-BAD0-3719C73C1444}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SunshineAlley.SmokeTests", "tests\SunshineAlley.SmokeTests\SunshineAlley.SmokeTests.csproj", "{7EF01D44-D8C8-449C-80A9-F3767371787D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +18,28 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7E1E6F20-843F-483A-9B55-C857435BBAE7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7E1E6F20-843F-483A-9B55-C857435BBAE7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7E1E6F20-843F-483A-9B55-C857435BBAE7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7E1E6F20-843F-483A-9B55-C857435BBAE7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B625A4D-2062-4E3C-9729-ED5AD5552801}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B625A4D-2062-4E3C-9729-ED5AD5552801}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B625A4D-2062-4E3C-9729-ED5AD5552801}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B625A4D-2062-4E3C-9729-ED5AD5552801}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C15D916-D237-49D2-8F35-36A1B8A3CD72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C15D916-D237-49D2-8F35-36A1B8A3CD72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C15D916-D237-49D2-8F35-36A1B8A3CD72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C15D916-D237-49D2-8F35-36A1B8A3CD72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0AF490BA-4DCB-48EC-8D1B-E5E669B9B9FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0AF490BA-4DCB-48EC-8D1B-E5E669B9B9FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0AF490BA-4DCB-48EC-8D1B-E5E669B9B9FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0AF490BA-4DCB-48EC-8D1B-E5E669B9B9FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B57135BB-B68D-4213-BAD0-3719C73C1444}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B57135BB-B68D-4213-BAD0-3719C73C1444}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B57135BB-B68D-4213-BAD0-3719C73C1444}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B57135BB-B68D-4213-BAD0-3719C73C1444}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7EF01D44-D8C8-449C-80A9-F3767371787D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EF01D44-D8C8-449C-80A9-F3767371787D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EF01D44-D8C8-449C-80A9-F3767371787D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EF01D44-D8C8-449C-80A9-F3767371787D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {BA202699-B924-46A7-8FE0-EF1E8ED95708}
 	EndGlobalSection
 EndGlobal
