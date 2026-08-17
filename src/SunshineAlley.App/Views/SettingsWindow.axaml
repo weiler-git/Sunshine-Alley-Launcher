@@ -17,7 +17,9 @@
     <StackPanel Grid.Row="1" Margin="0,24,0,18">
       <TextBlock Text="Valheim game directory" Classes="muted" />
       <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
-        <TextBox Text="{Binding GameDirectory}" />
+        <TextBox
+            Text="{Binding GameDirectory}"
+            LostFocus="GameDirectory_LostFocus" />
         <Button
             Grid.Column="1"
             Classes="secondary"
@@ -30,7 +32,9 @@
     <StackPanel Grid.Row="2">
       <TextBlock Text="Mod data directory" Classes="muted" />
       <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
-        <TextBox Text="{Binding ModDataDirectory}" />
+        <TextBox
+            Text="{Binding ModDataDirectory}"
+            LostFocus="ModDataDirectory_LostFocus" />
         <Button
             Grid.Column="1"
             Classes="secondary"

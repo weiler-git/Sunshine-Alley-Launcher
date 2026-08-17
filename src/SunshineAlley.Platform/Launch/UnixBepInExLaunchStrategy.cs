@@ -220,6 +220,12 @@ internal sealed class UnixBepInExLaunchStrategy : IGameLaunchStrategy
         string content,
         CancellationToken cancellationToken)
     {
+        if (PathSecurity.ContainsReparsePoint(path))
+        {
+            throw new LauncherException(
+                $"Refusing to write the launch wrapper through a symbolic link or junction: '{path}'.");
+        }
+
         await File.WriteAllTextAsync(path, content, cancellationToken);
         File.SetUnixFileMode(
             path,

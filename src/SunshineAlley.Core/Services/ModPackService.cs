@@ -118,6 +118,12 @@ public sealed class ModPackService
         string filePath,
         CancellationToken cancellationToken = default)
     {
+        if (PathSecurity.ContainsReparsePoint(filePath))
+        {
+            throw new LauncherException(
+                $"Refusing to hash a file through a symbolic link or Windows junction: '{filePath}'.");
+        }
+
         await using var stream = new FileStream(
             filePath,
             FileMode.Open,
@@ -139,8 +145,13 @@ public sealed class ModPackService
             return [];
         }
 
-        string[] files = Directory
-            .EnumerateFiles(packRoot, "*", SearchOption.AllDirectories)
+        if (PathSecurity.ContainsReparsePoint(packRoot))
+        {
+            throw new LauncherException(
+                $"Modpack {Path.GetFileName(packRoot)} is inside a symbolic link or Windows junction.");
+        }
+
+        string[] files = EnumeratePackFiles(packRoot, cancellationToken)
             .Where(path => !path.EndsWith(".download", StringComparison.OrdinalIgnoreCase))
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -184,6 +195,12 @@ public sealed class ModPackService
             if (!PathSecurity.IsUnderRoot(packRoot, illegal.File) || !File.Exists(illegal.File))
             {
                 continue;
+            }
+
+            if (PathSecurity.ContainsReparsePoint(illegal.File))
+            {
+                throw new LauncherException(
+                    $"Refusing to delete through a symbolic link or Windows junction: '{illegal.File}'.");
             }
 
             File.Delete(illegal.File);
@@ -246,6 +263,12 @@ public sealed class ModPackService
             }
             else if (!option.Enabled && optional.Ok && File.Exists(target))
             {
+                if (PathSecurity.ContainsReparsePoint(target))
+                {
+                    throw new LauncherException(
+                        $"Refusing to delete through a symbolic link or Windows junction: '{target}'.");
+                }
+
                 File.Delete(target);
                 changed = true;
             }
@@ -357,6 +380,12 @@ public sealed class ModPackService
                 $"Rejected mod download outside modpack {Path.GetFileName(packRoot)}.");
         }
 
+        if (PathSecurity.ContainsReparsePoint(destination))
+        {
+            throw new LauncherException(
+                $"Rejected mod download through a symbolic link or Windows junction: '{destination}'.");
+        }
+
         return destination;
     }
 
@@ -381,6 +410,13 @@ public sealed class ModPackService
         }
 
         string destinationDirectory = Path.Combine(bepinex, "config");
+        if (PathSecurity.ContainsReparsePoint(defaults)
+            || PathSecurity.ContainsReparsePoint(destinationDirectory))
+        {
+            throw new LauncherException(
+                "Default configuration files cannot be installed through a symbolic link or Windows junction.");
+        }
+
         Directory.CreateDirectory(destinationDirectory);
         foreach (string source in Directory.EnumerateFiles(defaults, "*.txt"))
         {
@@ -400,6 +436,41 @@ public sealed class ModPackService
     {
         string normalized = Regex.Replace(input.Trim(), "[^A-Za-z0-9-]+", "-");
         return Regex.Replace(normalized, "-+", "-").Trim('-');
+    }
+
+    private static IEnumerable<string> EnumeratePackFiles(
+        string packRoot,
+        CancellationToken cancellationToken)
+    {
+        var pending = new Stack<string>();
+        pending.Push(packRoot);
+        while (pending.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string directory = pending.Pop();
+            foreach (string entry in Directory.EnumerateFileSystemEntries(
+                directory,
+                "*",
+                SearchOption.TopDirectoryOnly))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                FileAttributes attributes = File.GetAttributes(entry);
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    throw new LauncherException(
+                        $"Modpacks cannot contain symbolic links or Windows junctions: '{entry}'.");
+                }
+
+                if ((attributes & FileAttributes.Directory) != 0)
+                {
+                    pending.Push(entry);
+                }
+                else
+                {
+                    yield return entry;
+                }
+            }
+        }
     }
 }
 
@@ -426,6 +497,46 @@ public static class PathSecurity
             StringSplitOptions.RemoveEmptyEntries)[0];
         return !Path.IsPathRooted(relative)
             && !string.Equals(firstSegment, "..", StringComparison.Ordinal);
+    }
+
+    public static bool ContainsReparsePoint(string candidate)
+    {
+        string normalized = Path.GetFullPath(candidate);
+        string pathRoot = Path.GetPathRoot(normalized)
+            ?? throw new ArgumentException("The path does not have a filesystem root.", nameof(candidate));
+        string current = pathRoot;
+
+        if (HasReparsePointAttribute(current))
+        {
+            return true;
+        }
+
+        string relative = Path.GetRelativePath(pathRoot, normalized);
+        foreach (string segment in relative.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+            if (HasReparsePointAttribute(current))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasReparsePointAttribute(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        }
+        catch (Exception exception) when (exception is FileNotFoundException
+            or DirectoryNotFoundException)
+        {
+            return false;
+        }
     }
 }
 

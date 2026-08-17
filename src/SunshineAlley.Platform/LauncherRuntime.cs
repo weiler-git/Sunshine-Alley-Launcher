@@ -18,6 +18,7 @@ public sealed class LauncherRuntime : IAsyncDisposable
         PlatformPaths paths,
         JsonSettingsStore settingsStore,
         LauncherSettings settings,
+        ModDataDirectoryPolicy modDataDirectories,
         DeviceIdentity deviceIdentity,
         LauncherIdentity identity,
         HttpClient httpClient,
@@ -30,6 +31,7 @@ public sealed class LauncherRuntime : IAsyncDisposable
         Paths = paths;
         SettingsStore = settingsStore;
         Settings = settings;
+        ModDataDirectories = modDataDirectories;
         DeviceIdentity = deviceIdentity;
         _identity = identity;
         _httpClient = httpClient;
@@ -43,6 +45,7 @@ public sealed class LauncherRuntime : IAsyncDisposable
     public PlatformPaths Paths { get; }
     public ISettingsStore SettingsStore { get; }
     public LauncherSettings Settings { get; }
+    public IModDataDirectoryPolicy ModDataDirectories { get; }
     public DeviceIdentity DeviceIdentity { get; }
     public ISteamService Steam { get; }
     public IShellService Shell { get; }
@@ -84,6 +87,7 @@ public sealed class LauncherRuntime : IAsyncDisposable
         var steam = new SteamService();
         var shell = new ShellService();
         var settings = new LauncherSettings(settingsStore, paths.DataDirectory);
+        var modDataDirectories = new ModDataDirectoryPolicy();
         var servers = new ServerCatalogService(api);
         var modPacks = new ModPackService(api, httpClient, settingsStore);
         var gameLauncher = new BepInExGameLaunchService(steam);
@@ -92,6 +96,7 @@ public sealed class LauncherRuntime : IAsyncDisposable
             paths,
             settingsStore,
             settings,
+            modDataDirectories,
             deviceIdentity,
             identity,
             httpClient,

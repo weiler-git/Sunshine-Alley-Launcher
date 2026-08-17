@@ -18,6 +18,8 @@ internal static class Program
         {
             StableDeviceGuid();
             PathContainment(temporaryRoot);
+            await UnsafeModDataRootIsRejectedAsync(temporaryRoot);
+            SymlinkIsRejected(temporaryRoot);
             await SettingsRoundTripAsync(temporaryRoot);
             await HashingAsync(temporaryRoot);
             RsaXmlCompatibility();
@@ -51,6 +53,36 @@ internal static class Program
         string sibling = Path.Combine(Path.GetDirectoryName(root)!, "outside.dll");
         Assert(PathSecurity.IsUnderRoot(root, child), "Child path must be accepted.");
         Assert(!PathSecurity.IsUnderRoot(root, sibling), "Sibling path must be rejected.");
+    }
+
+    private static async Task UnsafeModDataRootIsRejectedAsync(string root)
+    {
+        var policy = new ModDataDirectoryPolicy();
+        DirectoryValidationResult result = await policy.ValidateAsync(
+            root,
+            string.Empty,
+            false);
+        Assert(!result.IsValid, "The temporary-files directory must not be accepted for mod data.");
+    }
+
+    private static void SymlinkIsRejected(string root)
+    {
+        string target = Path.Combine(root, "link-target");
+        string link = Path.Combine(root, "link");
+        Directory.CreateDirectory(target);
+        try
+        {
+            Directory.CreateSymbolicLink(link, target);
+            Assert(
+                PathSecurity.ContainsReparsePoint(Path.Combine(link, "file.dll")),
+                "A path through a symbolic link must be rejected.");
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException
+            or PlatformNotSupportedException
+            or IOException)
+        {
+            // Some Windows test hosts do not permit creating symbolic links.
+        }
     }
 
     private static async Task SettingsRoundTripAsync(string root)

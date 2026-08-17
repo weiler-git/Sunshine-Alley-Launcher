@@ -91,6 +91,9 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         private set => SetField(ref _modDataDirectory, value);
     }
 
+    public string DefaultModDataDirectory =>
+        _runtime?.Paths.DataDirectory ?? ModDataDirectory;
+
     public string DeviceIdentityNote
     {
         get => _deviceIdentityNote;
@@ -234,21 +237,36 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 
     public Task ReverifySelectedAsync() => RunOperationAsync(VerifySelectedCoreAsync);
 
-    public async Task UpdateDirectoriesAsync(string gameDirectory, string modDataDirectory)
+    public async Task<DirectoryValidationResult> ValidateGameDirectoryAsync(
+        string gameDirectory)
     {
-        await RunOperationAsync(async () =>
+        if (_runtime is null)
         {
-            if (_runtime is null || _preferences is null)
+            return DirectoryValidationResult.Invalid(
+                gameDirectory,
+                "The launcher is still initializing.");
+        }
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(gameDirectory))
             {
-                return;
+                return DirectoryValidationResult.Invalid(
+                    string.Empty,
+                    "Choose the directory containing the Valheim executable.");
             }
 
             string normalizedGame = Path.GetFullPath(gameDirectory);
-            string normalizedData = Path.GetFullPath(modDataDirectory);
-            Directory.CreateDirectory(normalizedData);
+            if (!Directory.Exists(normalizedGame))
+            {
+                return DirectoryValidationResult.Invalid(
+                    normalizedGame,
+                    "The selected game directory does not exist.");
+            }
+
             var request = new GameLaunchRequest(
                 normalizedGame,
-                normalizedData,
+                ModDataDirectory,
                 LauncherConstants.VanillaModPackId,
                 false,
                 false);
@@ -257,31 +275,111 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
                 _shutdown.Token);
             if (diagnostics.GameExecutable is null)
             {
-                throw new LauncherException(
+                return DirectoryValidationResult.Invalid(
+                    normalizedGame,
                     "The selected game directory does not contain the native Valheim executable for this operating system.");
             }
 
-            GameDirectory = normalizedGame;
-            ModDataDirectory = normalizedData;
+            return DirectoryValidationResult.Valid(normalizedGame);
+        }
+        catch (Exception exception) when (exception is ArgumentException
+            or NotSupportedException
+            or PathTooLongException)
+        {
+            return DirectoryValidationResult.Invalid(
+                gameDirectory,
+                "The game-directory path is invalid: " + exception.Message);
+        }
+    }
+
+    public Task<DirectoryValidationResult> ValidateModDataDirectoryAsync(
+        string modDataDirectory,
+        string gameDirectory,
+        bool initialize = false)
+    {
+        if (_runtime is null)
+        {
+            return Task.FromResult(DirectoryValidationResult.Invalid(
+                modDataDirectory,
+                "The launcher is still initializing."));
+        }
+
+        return _runtime.ModDataDirectories.ValidateAsync(
+            modDataDirectory,
+            gameDirectory,
+            initialize,
+            _shutdown.Token);
+    }
+
+    public async Task UpdateDirectoriesAsync(string gameDirectory, string modDataDirectory)
+    {
+        if (_runtime is null || _preferences is null)
+        {
+            throw new LauncherException("The launcher is still initializing.");
+        }
+
+        if (IsBusy)
+        {
+            throw new LauncherException("Wait for the current launcher operation to finish.");
+        }
+
+        IsBusy = true;
+        try
+        {
+            DirectoryValidationResult gameValidation = await ValidateGameDirectoryAsync(
+                gameDirectory);
+            if (!gameValidation.IsValid)
+            {
+                throw new LauncherException(gameValidation.Error!);
+            }
+
+            DirectoryValidationResult dataValidation =
+                await ValidateModDataDirectoryAsync(
+                    modDataDirectory,
+                    gameValidation.NormalizedPath,
+                    true);
+            if (!dataValidation.IsValid)
+            {
+                throw new LauncherException(dataValidation.Error!);
+            }
+
+            GameDirectory = gameValidation.NormalizedPath;
+            ModDataDirectory = dataValidation.NormalizedPath;
             _preferences = _preferences with
             {
-                GameDirectory = normalizedGame,
-                ModDataDirectory = normalizedData
+                GameDirectory = GameDirectory,
+                ModDataDirectory = ModDataDirectory
             };
             await _runtime.Settings.SaveAsync(_preferences, _shutdown.Token);
             Status = "Directories saved.";
-        });
+            Notice = string.Empty;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
-    public async Task OpenModDataDirectoryAsync()
+    public Task OpenModDataDirectoryAsync() =>
+        RunOperationAsync(OpenModDataDirectoryCoreAsync);
+
+    private async Task OpenModDataDirectoryCoreAsync()
     {
         if (_runtime is null)
         {
             return;
         }
 
-        Directory.CreateDirectory(ModDataDirectory);
-        await _runtime.Shell.OpenFolderAsync(ModDataDirectory, _shutdown.Token);
+        DirectoryValidationResult validation = await ValidateModDataDirectoryAsync(
+            ModDataDirectory,
+            GameDirectory,
+            true);
+        if (!validation.IsValid)
+        {
+            throw new LauncherException(validation.Error!);
+        }
+
+        await _runtime.Shell.OpenFolderAsync(validation.NormalizedPath, _shutdown.Token);
     }
 
     private async Task RefreshServersCoreAsync(bool initial)
@@ -344,10 +442,19 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             return;
         }
 
+        DirectoryValidationResult dataValidation = await ValidateModDataDirectoryAsync(
+            ModDataDirectory,
+            GameDirectory,
+            true);
+        if (!dataValidation.IsValid)
+        {
+            throw new LauncherException(dataValidation.Error!);
+        }
+
         var progress = new Progress<LauncherProgress>(UpdateProgress);
         await _runtime.ModPacks.EnsureVerifiedAsync(
             SelectedServer.ModPackId,
-            ModDataDirectory,
+            dataValidation.NormalizedPath,
             _runtime.Servers.IsAdmin,
             progress,
             _shutdown.Token);

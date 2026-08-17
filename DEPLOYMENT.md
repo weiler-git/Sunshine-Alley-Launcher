@@ -325,6 +325,11 @@ For automatic updates later, publish a signed manifest with one entry per RID, v
 
 ## 11. Operational notes
 
+- The mod-data picker accepts only a dedicated launcher-owned directory. It rejects filesystem roots, profile/Documents/Desktop/Downloads/temp locations, the launcher install, the Valheim install, unrelated non-empty folders, and paths traversing symbolic links or Windows junctions.
+- On first use, the launcher writes `.sunshine-alley-root` directly in the selected mod-data root. The marker has no extension and is outside `ModPacks/<id>`, so it is never included in a modpack file list sent to the existing verification endpoint.
+- An existing unmarked directory is adopted only when empty or when its top level contains launcher-known entries such as `Launcher` and `ModPacks`. Once marked, other root-level launcher data is allowed; synchronization and deletion remain confined to the selected `ModPacks/<id>` directory.
+- Invalid game paths are reported when chosen, when the field loses focus, and again on Save. Save requires the platform-native Valheim executable (`valheim.exe`, the Linux binary, or the macOS app executable) before persisting either directory.
+- Rejected or outdated mod files are still deleted in place according to the current server response. This change adds no quarantine behavior and makes no server API/manifest changes.
 - `settings.json` is written atomically and mode `0600` on Unix.
 - RSA private material never enters JSON, logs, API JSON, or command arguments.
 - API signatures remain RSA-2048/SHA-256/PKCS#1 v1.5 and public keys retain the legacy `<RSAKeyValue>` format for backend compatibility.

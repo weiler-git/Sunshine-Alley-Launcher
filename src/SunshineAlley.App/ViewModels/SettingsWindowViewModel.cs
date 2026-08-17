@@ -1,3 +1,5 @@
+using SunshineAlley.Core;
+
 namespace SunshineAlley.App.ViewModels;
 
 public sealed class SettingsWindowViewModel : ViewModelBase
@@ -26,6 +28,10 @@ public sealed class SettingsWindowViewModel : ViewModelBase
         set => SetField(ref _modDataDirectory, value);
     }
 
+    public string ModDataBrowseStart => Directory.Exists(ModDataDirectory)
+        ? ModDataDirectory
+        : _main.DefaultModDataDirectory;
+
     public string Status
     {
         get => _status;
@@ -41,8 +47,64 @@ public sealed class SettingsWindowViewModel : ViewModelBase
             return false;
         }
 
-        await _main.UpdateDirectoriesAsync(GameDirectory, ModDataDirectory);
-        Status = _main.Status;
-        return string.Equals(Status, "Directories saved.", StringComparison.Ordinal);
+        DirectoryValidationResult gameValidation = await _main.ValidateGameDirectoryAsync(
+            GameDirectory);
+        if (!gameValidation.IsValid)
+        {
+            Status = gameValidation.Error!;
+            return false;
+        }
+
+        DirectoryValidationResult dataValidation =
+            await _main.ValidateModDataDirectoryAsync(
+                ModDataDirectory,
+                gameValidation.NormalizedPath);
+        if (!dataValidation.IsValid)
+        {
+            Status = dataValidation.Error!;
+            return false;
+        }
+
+        GameDirectory = gameValidation.NormalizedPath;
+        ModDataDirectory = dataValidation.NormalizedPath;
+        try
+        {
+            await _main.UpdateDirectoriesAsync(GameDirectory, ModDataDirectory);
+            Status = "Directories saved.";
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Status = exception.Message;
+            return false;
+        }
+    }
+
+    public async Task ValidateGameDirectoryAsync()
+    {
+        DirectoryValidationResult result = await _main.ValidateGameDirectoryAsync(
+            GameDirectory);
+        Status = result.IsValid
+            ? "Valheim game directory found."
+            : result.Error!;
+        if (result.IsValid)
+        {
+            GameDirectory = result.NormalizedPath;
+        }
+    }
+
+    public async Task ValidateModDataDirectoryAsync()
+    {
+        DirectoryValidationResult result =
+            await _main.ValidateModDataDirectoryAsync(
+                ModDataDirectory,
+                GameDirectory);
+        Status = result.IsValid
+            ? "Mod-data directory is safe to use."
+            : result.Error!;
+        if (result.IsValid)
+        {
+            ModDataDirectory = result.NormalizedPath;
+        }
     }
 }

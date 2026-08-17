@@ -21,6 +21,8 @@ internal sealed class FileDeploymentManager
 
     public async Task BeginAsync(bool persistent, CancellationToken cancellationToken)
     {
+        EnsureSafeGamePath(_gameRoot);
+        EnsureSafeGamePath(_backupRoot);
         await RestoreAsync(cancellationToken);
         Directory.CreateDirectory(_backupRoot);
         _manifest = new DeploymentManifest { Persistent = persistent };
@@ -56,6 +58,8 @@ internal sealed class FileDeploymentManager
 
     public async Task RestoreAsync(CancellationToken cancellationToken)
     {
+        EnsureSafeGamePath(_gameRoot);
+        EnsureSafeGamePath(_backupRoot);
         if (!File.Exists(_manifestPath))
         {
             if (Directory.Exists(_backupRoot))
@@ -168,7 +172,18 @@ internal sealed class FileDeploymentManager
             throw new LauncherException($"Rejected unsafe deployment target '{relativeTarget}'.");
         }
 
+        EnsureSafeGamePath(target);
+
         return target;
+    }
+
+    private static void EnsureSafeGamePath(string path)
+    {
+        if (PathSecurity.ContainsReparsePoint(path))
+        {
+            throw new LauncherException(
+                $"Refusing to modify the game installation through a symbolic link or Windows junction: '{path}'.");
+        }
     }
 
     private string GetBackupPath(string relativeTarget) =>

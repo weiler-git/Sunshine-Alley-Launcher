@@ -21,6 +21,7 @@ public sealed partial class SettingsWindow : Window
             if (selected is not null)
             {
                 viewModel.GameDirectory = selected;
+                await viewModel.ValidateGameDirectoryAsync();
             }
         }
     }
@@ -29,11 +30,30 @@ public sealed partial class SettingsWindow : Window
     {
         if (DataContext is SettingsWindowViewModel viewModel)
         {
-            string? selected = await PickFolderAsync("Select the mod data directory", viewModel.ModDataDirectory);
+            string? selected = await PickFolderAsync(
+                "Select the mod data directory",
+                viewModel.ModDataBrowseStart);
             if (selected is not null)
             {
                 viewModel.ModDataDirectory = selected;
+                await viewModel.ValidateModDataDirectoryAsync();
             }
+        }
+    }
+
+    private async void GameDirectory_LostFocus(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is SettingsWindowViewModel viewModel)
+        {
+            await viewModel.ValidateGameDirectoryAsync();
+        }
+    }
+
+    private async void ModDataDirectory_LostFocus(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is SettingsWindowViewModel viewModel)
+        {
+            await viewModel.ValidateModDataDirectoryAsync();
         }
     }
 

@@ -97,6 +97,10 @@ internal static class Program
         }
 
         string data = ReadOption(args, "--data") ?? preferences.ModDataDirectory;
+        data = await EnsureModDataDirectoryAsync(
+            runtime,
+            data,
+            preferences.GameDirectory);
         var progress = new Progress<LauncherProgress>(PrintProgress);
         await runtime.Servers.RefreshAsync();
         await runtime.ModPacks.EnsureVerifiedAsync(
@@ -122,6 +126,7 @@ internal static class Program
 
         if (modPackId > 0)
         {
+            data = await EnsureModDataDirectoryAsync(runtime, data, game);
             await runtime.Servers.RefreshAsync();
             await runtime.ModPacks.EnsureVerifiedAsync(
                 modPackId,
@@ -146,6 +151,23 @@ internal static class Program
         LaunchResult result = await runtime.GameLauncher.LaunchAsync(request, progress);
         Console.WriteLine($"Valheim process {result.ProcessId} exited after {result.Runtime:g}.");
         return 0;
+    }
+
+    private static async Task<string> EnsureModDataDirectoryAsync(
+        LauncherRuntime runtime,
+        string modDataDirectory,
+        string gameDirectory)
+    {
+        DirectoryValidationResult result = await runtime.ModDataDirectories.ValidateAsync(
+            modDataDirectory,
+            gameDirectory,
+            true);
+        if (!result.IsValid)
+        {
+            throw new LauncherException(result.Error!);
+        }
+
+        return result.NormalizedPath;
     }
 
     private static int PrintDeviceId(LauncherRuntime runtime)

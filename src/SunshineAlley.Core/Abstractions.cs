@@ -25,6 +25,15 @@ public interface IDeviceIdentityService
     Task<DeviceIdentity> GetAsync(CancellationToken cancellationToken = default);
 }
 
+public interface IModDataDirectoryPolicy
+{
+    Task<DirectoryValidationResult> ValidateAsync(
+        string candidate,
+        string gameDirectory,
+        bool initialize,
+        CancellationToken cancellationToken = default);
+}
+
 public interface ILegacyMigrationService
 {
     Task MigrateAsync(string deviceId, CancellationToken cancellationToken = default);

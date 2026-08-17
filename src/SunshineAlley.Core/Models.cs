@@ -105,6 +105,17 @@ public sealed record LauncherPreferences(
     bool Persistent,
     string SelectedServer);
 
+public sealed record DirectoryValidationResult(
+    bool IsValid,
+    string NormalizedPath,
+    string? Error)
+{
+    public static DirectoryValidationResult Valid(string path) => new(true, path, null);
+
+    public static DirectoryValidationResult Invalid(string path, string error) =>
+        new(false, path, error);
+}
+
 public sealed record LauncherProgress(string Message, long Completed = 0, long Total = 0)
 {
     public double Fraction => Total <= 0 ? 0 : Math.Clamp((double)Completed / Total, 0, 1);
