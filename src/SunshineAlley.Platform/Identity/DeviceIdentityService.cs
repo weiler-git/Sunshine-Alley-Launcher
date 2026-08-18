@@ -75,8 +75,9 @@ public sealed class DeviceIdentityService : IDeviceIdentityService
 
     public static string CreateStableGuid(string source)
     {
-        Span<byte> bytes = stackalloc byte[16];
-        SHA256.HashData(Encoding.UTF8.GetBytes(source), bytes);
+        Span<byte> hash = stackalloc byte[32];
+        SHA256.HashData(Encoding.UTF8.GetBytes(source), hash);
+        Span<byte> bytes = hash[..16];
         bytes[6] = (byte)((bytes[6] & 0x0f) | 0x80); // UUID version 8: application-defined.
         bytes[8] = (byte)((bytes[8] & 0x3f) | 0x80); // RFC 4122 variant.
         string value = Convert.ToHexStringLower(bytes);
