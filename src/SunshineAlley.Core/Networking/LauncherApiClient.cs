@@ -51,6 +51,14 @@ public sealed class LauncherApiClient
             request,
             cancellationToken);
 
+    public Task<SignedLauncherUpdateEnvelope> GetLauncherUpdateAsync(
+        LauncherUpdateRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostSignedAsync<LauncherUpdateRequest, SignedLauncherUpdateEnvelope>(
+            "LauncherGetUpdateV3",
+            request,
+            cancellationToken);
+
     private async Task<TResponse> PostSignedAsync<TRequest, TResponse>(
         string operation,
         TRequest request,

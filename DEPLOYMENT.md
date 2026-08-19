@@ -1,18 +1,19 @@
-# Sunshine Alley Launcher — cross-platform deployment
+# Sunshine Alley Launcher â€” cross-platform deployment
 
-This patch replaces the .NET 7 Windows Forms launcher with a .NET 10 / Avalonia 12 application. It separates platform-neutral launcher behavior from Windows, Linux, and macOS integration, retains the existing Sunshine Alley API field names, and provides both a GUI and a command-line launch harness.
+The base V3 migration replaces the .NET 7 Windows Forms launcher with a .NET 10 / Avalonia 12 application. This incremental patch adds the Windows guided installer/migrator, repair/uninstall flow, and signed V3 application updater while retaining the existing cross-platform architecture and command-line launch harness.
 
 ## 0. Apply the patch
 
-The supplied binary Git patch targets the archive's original commit `ee6b03073d221ea826a82abfa55ad67989f71ae7`. Start from a clean checkout of that commit, extract the patch ZIP outside the repository, and run:
+The supplied Git patch targets the current V3 source archive that already contains the earlier migration patches. Start from that same current branch with no overlapping local edits, extract the patch ZIP outside the repository, and run:
 
 ```bash
-git switch -c avalonia-cross-platform
-git apply --index --binary /path/to/SunshineAlley-CrossPlatform-Migration.patch
+git switch -c v3-windows-installer-updater
+git apply --check /path/to/SunshineAlley-V3-Windows-Installer-Updater.patch
+git apply --index --binary /path/to/SunshineAlley-V3-Windows-Installer-Updater.patch
 git status --short
 ```
 
-Review the staged changes, then commit them normally. `--binary` is required because the patch relocates the existing image/icon assets. The old archive also contains generated `bin`, `obj`, `.vs`, publish output, and an untracked `SALauncher.pfx`; none belongs in source control or in the patch. Delete those local build outputs, and rotate the PFX if it was ever distributed.
+Review the staged changes, build/test them, then commit normally. Generated `bin`, `obj`, `.vs`, `artifacts`, release secrets, and signing certificates do not belong in source control or in the patch.
 
 ## 1. Resulting solution
 
@@ -24,7 +25,7 @@ Review the staged changes, then commit them normally. `--binary` is required bec
 | `SunshineAlley.Cli` | A GUI-independent diagnostic, verify, and launch harness. Use this first on every target OS. |
 | `SunshineAlley.SmokeTests` | Dependency-free executable smoke tests for device GUID derivation, settings, path containment, hashing, and legacy RSA XML conversion. |
 
-The old Windows Forms project, COM shortcut dependency, embedded signing PFX reference, self-copying installer, and self-replacing `.exe` updater are removed. Installation and updates are now handled by RID-specific release packages. Non-secret values in the legacy Windows registry key are retained during migration; the migrated private RSA value is deleted from the registry after Credential Manager accepts it.
+The old Windows Forms project, external COM shortcut-library dependency, embedded signing PFX reference, and unsafe in-process updater are removed. Windows now has a guided per-user installer/migrator and a signed-manifest updater that runs the same launcher from a temporary helper copy. Linux/macOS package update implementations remain future platform work. Non-secret values in the legacy Windows registry key are retained during migration; the migrated private RSA value is deleted from the registry after Credential Manager accepts it.
 
 ## 2. Toolchain and NuGet requirements
 
@@ -64,7 +65,7 @@ dotnet run --project tests/SunshineAlley.SmokeTests/SunshineAlley.SmokeTests.csp
 Run the GUI on the current development OS:
 
 ```bash
-dotnet run --project src/SunshineAlley.App/SunshineAlley.App.csproj
+dotnet run --project src/SunshineAlley.App/SunshineAlley.App.csproj -- --portable
 ```
 
 The included GitHub Actions workflow builds all four target RIDs on Windows 2025, Ubuntu 24.04, macOS 15 Intel, and macOS 15 Apple Silicon runners. `scripts/publish-all.sh` and `scripts/publish-all.ps1` perform a local restore, smoke test, publish, and basic archive packaging.
@@ -114,11 +115,11 @@ Settings move from the registry into an atomic JSON file:
 
 | OS | Settings directory |
 | --- | --- |
-| Windows | `%LOCALAPPDATA%\Sunshine Alley\Launcher` |
+| Windows | `%LOCALAPPDATA%\Sunshine Alley\Config` |
 | Linux | `${XDG_CONFIG_HOME:-~/.config}/sunshine-alley/launcher` |
 | macOS | `~/Library/Application Support/Sunshine Alley/Launcher` |
 
-Downloaded modpack data defaults to the corresponding per-user data directory and can be changed in Settings.
+On Windows, downloaded modpack data defaults to `%LOCALAPPDATA%\Sunshine Alley\Data` and the application defaults to `%LOCALAPPDATA%\Sunshine Alley\App`. They are separate sibling directories; the data directory can be changed during setup or later in Settings. Linux/macOS retain their corresponding per-user data defaults.
 
 On the first Windows run:
 
@@ -281,14 +282,9 @@ Always publish for a specific RID: Avalonia and .NET include platform-native ass
 
 ### Windows release
 
-The script produces a folder/ZIP suitable for an installer input. Sign the final executable and installer with a certificate supplied by your release environment, for example with `signtool`. Do not restore the removed repository PFX reference.
+The published single-file EXE is also the guided installer and temporary update/maintenance helper. Its default installed path is `%LOCALAPPDATA%\Sunshine Alley\App\Sunshine Alley Launcher.exe`; no permanently separate updater executable is required. It registers a per-user Installed Apps entry and can create Start Menu/Desktop shortcuts without elevation.
 
-Recommended installer behavior:
-
-- install under `%LOCALAPPDATA%\Programs\Sunshine Alley Launcher` for a non-admin per-user install;
-- create Start Menu/Desktop shortcuts in the packaging layer;
-- preserve the per-user settings/data directories on update;
-- offer an explicit checkbox before deleting settings/modpacks during uninstall.
+Production Windows update releases require both Authenticode and an offline-signed update manifest. Use `scripts/windows/Initialize-UpdateSigning.ps1` once, then `scripts/windows/Publish-WindowsUpdate.ps1` for each release. Follow [WINDOWS_RELEASE.md](WINDOWS_RELEASE.md) for the complete publish/sign/test/upload procedure and [API_DEPLOYMENT.md](API_DEPLOYMENT.md) for the new `LauncherGetUpdateV3` server contract. Do not restore the removed repository PFX reference or store any private signing key in source control.
 
 ### Linux release
 
@@ -319,17 +315,18 @@ Do not copy Apple certificates, passwords, API keys, or notarization profiles in
 
 ## 10. Update policy
 
-The old updater downloaded and replaced a single running Windows `.exe`; that design is not valid for signed `.app` bundles, Linux packages, or four RID-specific payloads. This migration therefore makes the package/installer the update authority.
+Windows V3 calls only the new `LauncherGetUpdateV3` operation. It verifies an offline-signed manifest, release ID, newer version, RID/channel, approved HTTPS host, signed size/SHA-256, and Authenticode publisher. It stages on the application volume, launches a temporary copy of itself, exits, replaces the installed EXE, and retains the previous EXE until the replacement confirms successful runtime initialization. An early failure automatically rolls back and blocks that release ID until a higher release is published.
 
-For automatic updates later, publish a signed manifest with one entry per RID, version, package URL, SHA-256, and signature, then integrate a cross-platform updater that stages and swaps whole application packages outside the running process. Do not point the old `LauncherCheckUpdate` response at Linux/macOS clients or perform an in-process executable overwrite.
+The legacy `LauncherCheckUpdate` operation remains unchanged for V2 clients and must continue serving a raw immutable V3 bridge EXE for delayed users. It must never return a V3 envelope or non-Windows artifact. Linux and macOS do not use the Windows replacement implementation; their eventual update-installer implementations must respect native package/bundle signing and installation semantics.
 
 ## 11. Operational notes
 
 - The mod-data picker accepts only a dedicated launcher-owned directory. It rejects filesystem roots, profile/Documents/Desktop/Downloads/temp locations, the launcher install, the Valheim install, unrelated non-empty folders, and paths traversing symbolic links or Windows junctions.
+- The Windows App picker accepts only a local, dedicated, empty or already marked application directory. It rejects broad personal/temp folders, UNC paths, unrelated non-empty folders, overlap with Data, and reparse points.
 - On first use, the launcher writes `.sunshine-alley-root` directly in the selected mod-data root. The marker has no extension and is outside `ModPacks/<id>`, so it is never included in a modpack file list sent to the existing verification endpoint.
 - An existing unmarked directory is adopted only when empty or when its top level contains launcher-known entries such as `Launcher` and `ModPacks`. Once marked, other root-level launcher data is allowed; synchronization and deletion remain confined to the selected `ModPacks/<id>` directory.
 - Invalid game paths are reported when chosen, when the field loses focus, and again on Save. Save requires the platform-native Valheim executable (`valheim.exe`, the Linux binary, or the macOS app executable) before persisting either directory.
-- Rejected or outdated mod files are still deleted in place according to the current server response. This change adds no quarantine behavior and makes no server API/manifest changes.
+- Rejected or outdated mod files are still deleted in place according to the current mod-verification response. This change adds no quarantine behavior and does not change the modpack manifest contract; launcher application updates use the separate `LauncherGetUpdateV3` contract.
 - `settings.json` is written atomically and mode `0600` on Unix.
 - RSA private material never enters JSON, logs, API JSON, or command arguments.
 - API signatures remain RSA-2048/SHA-256/PKCS#1 v1.5 and public keys retain the legacy `<RSAKeyValue>` format for backend compatibility.

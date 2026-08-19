@@ -1,0 +1,103 @@
+<Window
+    x:Class="SunshineAlley.App.Views.SetupWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:SunshineAlley.App.ViewModels"
+    x:DataType="vm:SetupWindowViewModel"
+    Title="Sunshine Alley Launcher Setup"
+    Width="760"
+    Height="650"
+    MinWidth="650"
+    MinHeight="590"
+    Icon="/Assets/SA.ico"
+    WindowStartupLocation="CenterScreen">
+  <ScrollViewer>
+    <Grid Margin="34" RowDefinitions="Auto,Auto,Auto,Auto">
+      <StackPanel>
+        <TextBlock Text="{Binding Heading}" FontSize="26" FontWeight="Bold" Foreground="#F0B548" />
+        <TextBlock
+            Margin="0,8,0,0"
+            Text="{Binding Inspection.Message}"
+            Classes="muted"
+            TextWrapping="Wrap" />
+      </StackPanel>
+
+      <Border Grid.Row="1" Classes="card" Margin="0,24,0,0" IsVisible="{Binding ShowsInstallOptions}">
+        <StackPanel Spacing="14">
+          <StackPanel>
+            <TextBlock Text="Application directory" Classes="muted" />
+            <Grid ColumnDefinitions="*,Auto" Margin="0,5,0,0">
+              <TextBox
+                  Text="{Binding ApplicationDirectory}"
+                  IsReadOnly="{Binding Inspection.IsInstalled}" />
+              <Button
+                  Grid.Column="1"
+                  Margin="9,0,0,0"
+                  Classes="secondary"
+                  Content="Browse…"
+                  IsEnabled="{Binding CanChangeApplicationDirectory}"
+                  Click="BrowseApp_Click" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel>
+            <TextBlock Text="Mod-data directory" Classes="muted" />
+            <Grid ColumnDefinitions="*,Auto" Margin="0,5,0,0">
+              <TextBox Text="{Binding DataDirectory}" />
+              <Button Grid.Column="1" Margin="9,0,0,0" Classes="secondary" Content="Browse…" Click="BrowseData_Click" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel>
+            <TextBlock Text="Valheim game directory" Classes="muted" />
+            <Grid ColumnDefinitions="*,Auto" Margin="0,5,0,0">
+              <TextBox Text="{Binding GameDirectory}" />
+              <Button Grid.Column="1" Margin="9,0,0,0" Classes="secondary" Content="Browse…" Click="BrowseGame_Click" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Spacing="22">
+            <CheckBox Content="Start Menu shortcut" IsChecked="{Binding CreateStartMenuShortcut}" />
+            <CheckBox Content="Desktop shortcut" IsChecked="{Binding CreateDesktopShortcut}" />
+          </StackPanel>
+
+          <CheckBox
+              IsVisible="{Binding IsRepair}"
+              IsChecked="{Binding ResetDownloadedData}"
+              Content="Also reset downloaded ModPacks (they will be downloaded again)" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="1" Classes="card" Margin="0,24,0,0" IsVisible="{Binding IsUninstall}">
+        <StackPanel Spacing="14">
+          <TextBlock
+              Text="The application, shortcuts, update cache, and Windows installation registration will be removed. Device identity credentials are preserved."
+              TextWrapping="Wrap" />
+          <CheckBox
+              IsChecked="{Binding RemoveDataOnUninstall}"
+              Content="Also remove downloaded ModPacks and launcher data" />
+          <CheckBox
+              IsChecked="{Binding RemoveConfigurationOnUninstall}"
+              Content="Also remove settings (RSA credential remains in Windows Credential Manager)" />
+          <CheckBox
+              IsChecked="{Binding ConfirmUninstall}"
+              Content="I understand and want to uninstall Sunshine Alley Launcher" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="2" Margin="0,18,0,0" Background="#D0442527" CornerRadius="6" Padding="12">
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+      </Border>
+
+      <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" Margin="0,22,0,0">
+        <Button
+            IsVisible="{Binding Inspection.IsInstalled}"
+            Classes="secondary"
+            Content="Run installed copy"
+            Click="RunInstalled_Click" />
+        <Button Grid.Column="1" Classes="secondary" Margin="0,0,10,0" Content="Cancel" Click="Cancel_Click" />
+        <Button Grid.Column="2" Classes="primary" Content="{Binding PrimaryButtonText}" Click="Execute_Click" />
+      </Grid>
+    </Grid>
+  </ScrollViewer>
+</Window>

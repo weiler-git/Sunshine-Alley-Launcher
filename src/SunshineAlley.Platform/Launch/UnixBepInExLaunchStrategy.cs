@@ -105,7 +105,7 @@ internal sealed class UnixBepInExLaunchStrategy : IGameLaunchStrategy
         bool launchBegan = false;
         try
         {
-            progress?.Report(new LauncherProgress("Starting Valheim…"));
+            progress?.Report(new LauncherProgress("Starting Valheimâ€¦"));
             int processId;
             if (request.UseSteam)
             {

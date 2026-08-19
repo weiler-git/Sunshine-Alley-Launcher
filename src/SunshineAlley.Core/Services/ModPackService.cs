@@ -60,7 +60,7 @@ public sealed class ModPackService
                     Files = files
                 };
 
-                progress?.Report(new LauncherProgress("Checking files with the server…"));
+                progress?.Report(new LauncherProgress("Checking files with the serverâ€¦"));
                 FileValidationResponse response = await _apiClient.VerifyFilesAsync(request, cancellationToken);
                 bool changed = await ApplyResponseAsync(
                     response,
@@ -78,7 +78,7 @@ public sealed class ModPackService
                     return state;
                 }
 
-                progress?.Report(new LauncherProgress($"Rechecking synchronized files ({attempt}/4)…"));
+                progress?.Report(new LauncherProgress($"Rechecking synchronized files ({attempt}/4)â€¦"));
             }
 
             throw new LauncherException(

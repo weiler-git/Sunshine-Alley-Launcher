@@ -12,4 +12,8 @@
   <PropertyGroup Condition="'$(CI)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(AllowUnsignedUpdates)' == 'true'">
+    <DefineConstants>$(DefineConstants);SUNSHINE_ALLOW_UNSIGNED_UPDATES</DefineConstants>
+  </PropertyGroup>
 </Project>

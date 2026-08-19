@@ -243,6 +243,87 @@ public sealed class ServerFileDto
     public bool Ok { get; init; }
 }
 
+public sealed class LauncherUpdateRequest
+{
+    [JsonPropertyName("Version")]
+    public required string Version { get; init; }
+
+    [JsonPropertyName("RuntimeIdentifier")]
+    public required string RuntimeIdentifier { get; init; }
+
+    [JsonPropertyName("Channel")]
+    public required string Channel { get; init; }
+
+    [JsonPropertyName("ExecutableHash")]
+    public required string ExecutableHash { get; init; }
+
+    [JsonPropertyName("LayoutVersion")]
+    public int LayoutVersion { get; init; }
+
+    [JsonPropertyName("PublicKey")]
+    public string? PublicKey { get; init; }
+}
+
+public sealed class SignedLauncherUpdateEnvelope
+{
+    [JsonPropertyName("payload")]
+    public required string Payload { get; init; }
+
+    [JsonPropertyName("signature")]
+    public required string Signature { get; init; }
+
+    [JsonPropertyName("keyId")]
+    public required string KeyId { get; init; }
+}
+
+public sealed class LauncherUpdateManifest
+{
+    [JsonPropertyName("schemaVersion")]
+    public int SchemaVersion { get; init; }
+
+    [JsonPropertyName("updateAvailable")]
+    public bool UpdateAvailable { get; init; }
+
+    [JsonPropertyName("releaseId")]
+    public long ReleaseId { get; init; }
+
+    [JsonPropertyName("version")]
+    public required string Version { get; init; }
+
+    [JsonPropertyName("runtimeIdentifier")]
+    public required string RuntimeIdentifier { get; init; }
+
+    [JsonPropertyName("channel")]
+    public required string Channel { get; init; }
+
+    [JsonPropertyName("minimumVersion")]
+    public string? MinimumVersion { get; init; }
+
+    [JsonPropertyName("publishedUtc")]
+    public DateTimeOffset PublishedUtc { get; init; }
+
+    [JsonPropertyName("package")]
+    public LauncherUpdatePackage? Package { get; init; }
+}
+
+public sealed class LauncherUpdatePackage
+{
+    [JsonPropertyName("url")]
+    public required string Url { get; init; }
+
+    [JsonPropertyName("size")]
+    public long Size { get; init; }
+
+    [JsonPropertyName("sha256")]
+    public required string Sha256 { get; init; }
+}
+
+public sealed record LauncherUpdateCheckResult(
+    bool UpdateAvailable,
+    bool HelperStarted,
+    string Message,
+    string? Version = null);
+
 public class LauncherException : Exception
 {
     public LauncherException(string message) : base(message)

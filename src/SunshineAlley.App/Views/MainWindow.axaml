@@ -19,7 +19,7 @@
     <Border Background="#B80D1416" />
 
     <Grid Margin="34" RowDefinitions="Auto,*,Auto">
-      <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,22">
+      <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,22">
         <StackPanel>
           <TextBlock
               Text="SUNSHINE ALLEY"
@@ -34,6 +34,12 @@
         </StackPanel>
         <Button
             Grid.Column="1"
+            Classes="secondary"
+            Margin="0,0,9,0"
+            Content="Check update"
+            Command="{Binding UpdateCommand}" />
+        <Button
+            Grid.Column="2"
             Classes="secondary"
             Content="Settings"
             Click="Settings_Click" />

@@ -1,12 +1,19 @@
 namespace SunshineAlley.Platform;
 
 public sealed record PlatformPaths(
+    string ProductRoot,
+    string ApplicationDirectory,
     string ConfigurationDirectory,
     string DataDirectory,
     string CacheDirectory,
     string LogDirectory)
 {
     public string SettingsFile => Path.Combine(ConfigurationDirectory, "settings.json");
+
+    public string InstallationMarkerFile =>
+        Path.Combine(ApplicationDirectory, "install.json");
+
+    public string UpdateCacheDirectory => Path.Combine(CacheDirectory, "Updates");
 
     public static PlatformPaths CreateDefault()
     {
@@ -17,9 +24,14 @@ public sealed record PlatformPaths(
         if (OperatingSystem.IsWindows())
         {
             string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            configurationRoot = local;
-            dataRoot = local;
-            cacheRoot = local;
+            string productRoot = Path.Combine(local, "Sunshine Alley");
+            return new PlatformPaths(
+                productRoot,
+                Path.Combine(productRoot, "App"),
+                Path.Combine(productRoot, "Config"),
+                Path.Combine(productRoot, "Data"),
+                Path.Combine(productRoot, "Cache"),
+                Path.Combine(productRoot, "Data", "logs"));
         }
         else if (OperatingSystem.IsMacOS())
         {
@@ -43,7 +55,13 @@ public sealed record PlatformPaths(
         string configuration = Path.Combine(configurationRoot, productPath);
         string data = Path.Combine(dataRoot, productPath);
         string cache = Path.Combine(cacheRoot, productPath);
-        return new PlatformPaths(configuration, data, cache, Path.Combine(data, "logs"));
+        return new PlatformPaths(
+            Path.GetDirectoryName(configuration) ?? configuration,
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(AppContext.BaseDirectory)),
+            configuration,
+            data,
+            cache,
+            Path.Combine(data, "logs"));
     }
 
     public void EnsureDirectories()
@@ -51,6 +69,7 @@ public sealed record PlatformPaths(
         Directory.CreateDirectory(ConfigurationDirectory);
         Directory.CreateDirectory(DataDirectory);
         Directory.CreateDirectory(CacheDirectory);
+        Directory.CreateDirectory(UpdateCacheDirectory);
         Directory.CreateDirectory(LogDirectory);
     }
 

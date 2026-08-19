@@ -21,6 +21,12 @@ public sealed class ModDataDirectoryPolicy : IModDataDirectoryPolicy
         ],
         StringComparer.OrdinalIgnoreCase);
 
+    private readonly string _applicationDirectory;
+
+    public ModDataDirectoryPolicy(string? applicationDirectory = null) =>
+        _applicationDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
+            applicationDirectory ?? AppContext.BaseDirectory));
+
     public async Task<DirectoryValidationResult> ValidateAsync(
         string candidate,
         string gameDirectory,
@@ -152,7 +158,7 @@ public sealed class ModDataDirectoryPolicy : IModDataDirectoryPolicy
         }
     }
 
-    private static string? FindBroadPathProblem(string candidate)
+    private string? FindBroadPathProblem(string candidate)
     {
         string? root = Path.GetPathRoot(candidate);
         if (!string.IsNullOrWhiteSpace(root) && PathsEqual(candidate, root))
@@ -177,10 +183,8 @@ public sealed class ModDataDirectoryPolicy : IModDataDirectoryPolicy
             }
         }
 
-        string applicationDirectory = Path.TrimEndingDirectorySeparator(
-            Path.GetFullPath(AppContext.BaseDirectory));
-        if (PathSecurity.IsUnderRoot(applicationDirectory, candidate)
-            || PathSecurity.IsUnderRoot(candidate, applicationDirectory))
+        if (PathSecurity.IsUnderRoot(_applicationDirectory, candidate)
+            || PathSecurity.IsUnderRoot(candidate, _applicationDirectory))
         {
             return "The launcher installation directory cannot be used for mod data.";
         }
@@ -201,7 +205,6 @@ public sealed class ModDataDirectoryPolicy : IModDataDirectoryPolicy
 
         return values.Where(value =>
             !string.IsNullOrWhiteSpace(value.Path)
-            && Directory.Exists(value.Path)
             && !PathsEqual(value.Path, userProfile));
     }
 

@@ -6,6 +6,7 @@ using SunshineAlley.Platform.Secrets;
 using SunshineAlley.Platform.Shell;
 using SunshineAlley.Platform.Steam;
 using SunshineAlley.Platform.Storage;
+using SunshineAlley.Platform.Update;
 
 namespace SunshineAlley.Platform;
 
@@ -26,7 +27,8 @@ public sealed class LauncherRuntime : IAsyncDisposable
         ShellService shell,
         ServerCatalogService servers,
         ModPackService modPacks,
-        BepInExGameLaunchService gameLauncher)
+        BepInExGameLaunchService gameLauncher,
+        LauncherUpdateService updates)
     {
         Paths = paths;
         SettingsStore = settingsStore;
@@ -40,6 +42,7 @@ public sealed class LauncherRuntime : IAsyncDisposable
         Servers = servers;
         ModPacks = modPacks;
         GameLauncher = gameLauncher;
+        Updates = updates;
     }
 
     public PlatformPaths Paths { get; }
@@ -52,6 +55,7 @@ public sealed class LauncherRuntime : IAsyncDisposable
     public ServerCatalogService Servers { get; }
     public ModPackService ModPacks { get; }
     public IGameLaunchService GameLauncher { get; }
+    public LauncherUpdateService Updates { get; }
 
     public static async Task<LauncherRuntime> CreateAsync(
         CancellationToken cancellationToken = default)
@@ -91,6 +95,12 @@ public sealed class LauncherRuntime : IAsyncDisposable
         var servers = new ServerCatalogService(api);
         var modPacks = new ModPackService(api, httpClient, settingsStore);
         var gameLauncher = new BepInExGameLaunchService(steam);
+        var updates = new LauncherUpdateService(
+            api,
+            httpClient,
+            settingsStore,
+            paths,
+            identity);
 
         return new LauncherRuntime(
             paths,
@@ -104,7 +114,8 @@ public sealed class LauncherRuntime : IAsyncDisposable
             shell,
             servers,
             modPacks,
-            gameLauncher);
+            gameLauncher,
+            updates);
     }
 
     public async Task<LauncherPreferences> LoadPreferencesWithDiscoveryAsync(

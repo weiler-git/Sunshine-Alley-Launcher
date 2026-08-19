@@ -10,7 +10,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     private LauncherRuntime? _runtime;
     private LauncherPreferences? _preferences;
     private ServerItemViewModel? _selectedServer;
-    private string _status = "Starting launcher…";
+    private string _status = "Starting launcherâ€¦";
     private string _notice = string.Empty;
     private string _gameDirectory = string.Empty;
     private string _modDataDirectory = string.Empty;
@@ -21,6 +21,9 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     private bool _isProgressVisible;
     private double _progressValue;
     private Task? _refreshLoop;
+    private bool _shutdownRequested;
+    private bool _postUpdateConfirmed;
+    private string _persistentNotice = string.Empty;
 
     public MainWindowViewModel()
     {
@@ -33,12 +36,18 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         VerifyCommand = new AsyncCommand(
             () => RunOperationAsync(VerifySelectedCoreAsync),
             () => !IsBusy && SelectedServer?.ModPackId > 0);
+        UpdateCommand = new AsyncCommand(
+            () => RunOperationAsync(() => CheckForUpdateCoreAsync(false)),
+            () => !IsBusy && _runtime is not null);
     }
+
+    public event Action? ShutdownRequested;
 
     public ObservableCollection<ServerItemViewModel> Servers { get; } = [];
     public AsyncCommand PlayCommand { get; }
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand VerifyCommand { get; }
+    public AsyncCommand UpdateCommand { get; }
 
     public ServerItemViewModel? SelectedServer
     {
@@ -193,6 +202,47 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
                 ? "A generated fallback device ID is in use because no OS machine identifier was available."
                 : $"Device identity source: {identity.Source}.";
 
+            string? postUpdatePlan = LauncherStartup.Current.PostUpdatePlan;
+            if (!string.IsNullOrWhiteSpace(postUpdatePlan))
+            {
+                await _runtime.Updates.ConfirmPostUpdateAsync(
+                    postUpdatePlan,
+                    _shutdown.Token);
+                _postUpdateConfirmed = true;
+                Status = "Launcher update confirmed.";
+            }
+            else
+            {
+                await _runtime.Updates.CleanupConfirmedUpdatesAsync(_shutdown.Token);
+            }
+
+            if (LauncherStartup.Current.WasUpdateRollback)
+            {
+                Notice = "The previous launcher update did not complete; the previous launcher was retained or restored.";
+                string? rolledBackPlan = LauncherStartup.Current.RolledBackUpdatePlan;
+                if (!string.IsNullOrWhiteSpace(rolledBackPlan))
+                {
+                    try
+                    {
+                        await _runtime.Updates.RecordRolledBackUpdateAsync(
+                            rolledBackPlan,
+                            _shutdown.Token);
+                        Notice += " That release ID is blocked until a newer release is published.";
+                    }
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        Notice += " The failed release could not be recorded: "
+                            + exception.Message;
+                    }
+                }
+
+                _persistentNotice = Notice;
+            }
+            else if (await CheckForUpdateCoreAsync(true))
+            {
+                return;
+            }
+
             await RefreshServersCoreAsync(true);
             if (SelectedServer?.ModPackId > 0)
             {
@@ -202,10 +252,60 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             Status = "Ready.";
         });
 
-        if (_runtime is not null && !_shutdown.IsCancellationRequested)
+        if (_runtime is not null
+            && !_shutdown.IsCancellationRequested
+            && !_shutdownRequested)
         {
             _refreshLoop = RefreshLoopAsync(_shutdown.Token);
         }
+    }
+
+    private async Task<bool> CheckForUpdateCoreAsync(bool automatic)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var progress = new Progress<LauncherProgress>(UpdateProgress);
+            LauncherUpdateCheckResult result = await _runtime.Updates.CheckAndLaunchAsync(
+                progress,
+                _shutdown.Token);
+            Status = result.Message;
+            if (result.HelperStarted)
+            {
+                _shutdownRequested = true;
+                ShutdownRequested?.Invoke();
+                return true;
+            }
+
+            if (result.UpdateAvailable)
+            {
+                _persistentNotice = result.Message;
+                Notice = _persistentNotice;
+            }
+            else if (!automatic)
+            {
+                _persistentNotice = string.Empty;
+                Notice = string.Empty;
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (automatic)
+            {
+                _persistentNotice = "Launcher update check failed; game launching remains available. "
+                    + exception.Message;
+                Notice = _persistentNotice;
+                return false;
+            }
+
+            throw;
+        }
+
+        return false;
     }
 
     public IReadOnlyList<OptionalModState> GetOptionalMods()
@@ -343,6 +443,12 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
                 throw new LauncherException(dataValidation.Error!);
             }
 
+            Directory.CreateDirectory(Path.Combine(dataValidation.NormalizedPath, "Launcher"));
+            Directory.CreateDirectory(Path.Combine(dataValidation.NormalizedPath, "logs"));
+            Directory.CreateDirectory(Path.Combine(
+                dataValidation.NormalizedPath,
+                LauncherConstants.ModPacksDirectoryName));
+
             GameDirectory = gameValidation.NormalizedPath;
             ModDataDirectory = dataValidation.NormalizedPath;
             _preferences = _preferences with
@@ -389,7 +495,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             return;
         }
 
-        Status = "Refreshing launch options…";
+        Status = "Refreshing launch optionsâ€¦";
         string preferred = initial
             ? _preferences?.SelectedServer ?? string.Empty
             : SelectedServer?.WorldName ?? string.Empty;
@@ -397,7 +503,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         try
         {
             servers = await _runtime.Servers.RefreshAsync(_shutdown.Token);
-            Notice = string.Empty;
+            Notice = _persistentNotice;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -418,7 +524,10 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
                     DateTime.UtcNow,
                     true)
             ];
-            Notice = "The online server list is unavailable: " + exception.Message;
+            string serverNotice = "The online server list is unavailable: " + exception.Message;
+            Notice = string.IsNullOrWhiteSpace(_persistentNotice)
+                ? serverNotice
+                : _persistentNotice + " " + serverNotice;
         }
 
         Servers.Clear();
@@ -519,6 +628,14 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         {
             Status = "Operation failed.";
             Notice = exception.Message;
+            if (!string.IsNullOrWhiteSpace(LauncherStartup.Current.PostUpdatePlan)
+                && !_postUpdateConfirmed)
+            {
+                _shutdownRequested = true;
+                Notice = "The updated launcher could not confirm startup and will close for automatic rollback. "
+                    + exception.Message;
+                ShutdownRequested?.Invoke();
+            }
         }
         finally
         {
@@ -595,6 +712,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         PlayCommand.RaiseCanExecuteChanged();
         RefreshCommand.RaiseCanExecuteChanged();
         VerifyCommand.RaiseCanExecuteChanged();
+        UpdateCommand.RaiseCanExecuteChanged();
     }
 
     public async ValueTask DisposeAsync()

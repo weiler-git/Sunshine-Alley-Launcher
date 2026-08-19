@@ -1,8 +1,11 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using SunshineAlley.Core;
+using SunshineAlley.Platform;
 using SunshineAlley.Platform.Identity;
 using SunshineAlley.Platform.Storage;
+using SunshineAlley.Platform.Update;
 
 namespace SunshineAlley.SmokeTests;
 
@@ -23,6 +26,8 @@ internal static class Program
             await SettingsRoundTripAsync(temporaryRoot);
             await HashingAsync(temporaryRoot);
             RsaXmlCompatibility();
+            SignedUpdateManifest();
+            WindowsDefaultLayout();
             Console.WriteLine("All smoke tests passed.");
             return 0;
         }
@@ -125,6 +130,85 @@ internal static class Program
         Assert(
             source.VerifyData(data, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1),
             "Legacy RSA XML migration is not compatible.");
+    }
+
+    private static void SignedUpdateManifest()
+    {
+        using RSA signingKey = RSA.Create(2048);
+        var manifest = new LauncherUpdateManifest
+        {
+            SchemaVersion = 1,
+            UpdateAvailable = true,
+            ReleaseId = 7,
+            Version = "3.1.0",
+            RuntimeIdentifier = "win-x64",
+            Channel = "stable",
+            MinimumVersion = "3.0.0",
+            PublishedUtc = DateTimeOffset.UtcNow,
+            Package = new LauncherUpdatePackage
+            {
+                Url = "https://sunshinealley.games/launcher/releases/3.1.0/win-x64/SunshineAlleyLauncher.exe",
+                Size = 123,
+                Sha256 = new string('a', 64)
+            }
+        };
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(manifest);
+        byte[] signature = signingKey.SignData(
+            payload,
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
+        var envelope = new SignedLauncherUpdateEnvelope
+        {
+            Payload = Convert.ToBase64String(payload),
+            Signature = Convert.ToBase64String(signature),
+            KeyId = UpdateManifestVerifier.TrustedKeyId
+        };
+        var verifier = new UpdateManifestVerifier(
+            signingKey.ExportSubjectPublicKeyInfoPem());
+        VerifiedUpdateEnvelope verified = verifier.Verify(envelope);
+        Assert(verified.Manifest.ReleaseId == 7, "Signed update manifest verification failed.");
+
+        payload[0] ^= 1;
+        var tampered = new SignedLauncherUpdateEnvelope
+        {
+            Payload = Convert.ToBase64String(payload),
+            Signature = envelope.Signature,
+            KeyId = envelope.KeyId
+        };
+        bool rejected = false;
+        try
+        {
+            verifier.Verify(tampered);
+        }
+        catch (LauncherException)
+        {
+            rejected = true;
+        }
+
+        Assert(rejected, "A tampered update manifest must be rejected.");
+    }
+
+    private static void WindowsDefaultLayout()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        PlatformPaths paths = PlatformPaths.CreateDefault();
+        Assert(
+            Path.GetFileName(paths.ApplicationDirectory) == "App",
+            "Windows application directory must default to App.");
+        Assert(
+            Path.GetFileName(paths.ConfigurationDirectory) == "Config",
+            "Windows configuration directory must default to Config.");
+        Assert(
+            Path.GetFileName(paths.DataDirectory) == "Data",
+            "Windows mod-data directory must default to Data.");
+        Assert(
+            !PathSecurity.IsUnderRoot(paths.ApplicationDirectory, paths.DataDirectory)
+            && !PathSecurity.IsUnderRoot(paths.DataDirectory, paths.ApplicationDirectory),
+            "Windows App and Data defaults must be separate sibling directories.");
     }
 
     private static string Element(string name, byte[]? value) =>

@@ -6,4 +6,10 @@
   <ItemGroup>
     <ProjectReference Include="..\SunshineAlley.Core\SunshineAlley.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource
+        Include="Update\update-public-key.pem"
+        LogicalName="SunshineAlley.UpdatePublicKey.pem" />
+  </ItemGroup>
 </Project>

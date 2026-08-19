@@ -24,7 +24,7 @@
             Grid.Column="1"
             Classes="secondary"
             Margin="9,0,0,0"
-            Content="Browse…"
+            Content="Browseâ€¦"
             Click="BrowseGame_Click" />
       </Grid>
     </StackPanel>
@@ -39,7 +39,7 @@
             Grid.Column="1"
             Classes="secondary"
             Margin="9,0,0,0"
-            Content="Browse…"
+            Content="Browseâ€¦"
             Click="BrowseData_Click" />
       </Grid>
     </StackPanel>

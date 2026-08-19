@@ -39,6 +39,15 @@ public sealed class WindowsLegacyMigrationService : ILegacyMigrationService
         string privateKeyName = $"RSA[{deviceId}].Private";
         string publicKeyName = SettingsKeys.RsaPublic(deviceId);
         string signatureName = SettingsKeys.RsaSignature(deviceId);
+        bool layoutMigrated = await _settingsStore.GetAsync<bool?>(
+            SettingsKeys.WindowsLayoutMigration,
+            cancellationToken) == true;
+        string? configuredDataDirectory = await _settingsStore.GetAsync<string>(
+            SettingsKeys.ModDataDirectory,
+            cancellationToken);
+        string? configuredGameDirectory = await _settingsStore.GetAsync<string>(
+            SettingsKeys.GameDirectory,
+            cancellationToken);
 
         if (key.GetValue(privateKeyName) is string privateXml
             && !string.IsNullOrWhiteSpace(privateXml))
@@ -67,6 +76,28 @@ public sealed class WindowsLegacyMigrationService : ILegacyMigrationService
         foreach (string valueName in key.GetValueNames())
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (string.Equals(
+                    valueName,
+                    SettingsKeys.ModDataDirectory,
+                    StringComparison.OrdinalIgnoreCase)
+                && (layoutMigrated || !string.IsNullOrWhiteSpace(configuredDataDirectory)))
+            {
+                // V2 separates application and data directories. Do not let the
+                // legacy combined InstallDirectory overwrite the migrated path.
+                continue;
+            }
+
+            if (string.Equals(
+                    valueName,
+                    SettingsKeys.GameDirectory,
+                    StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(configuredGameDirectory))
+            {
+                // Guided setup has already validated this choice; do not replace
+                // it with an older registry path on first installed startup.
+                continue;
+            }
+
             if (valueName.StartsWith("RSA[", StringComparison.OrdinalIgnoreCase)
                 && valueName.EndsWith("].Private", StringComparison.OrdinalIgnoreCase))
             {

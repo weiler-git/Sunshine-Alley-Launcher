@@ -9,6 +9,14 @@ public static class SettingsKeys
     public const string SelectedServer = "SelectedServer";
     public const string FallbackDeviceId = "DeviceIdentity.FallbackGuid";
     public const string WindowsRegistryMigration = "Migration.WindowsRegistryV1";
+    public const string WindowsLayoutMigration = "Migration.WindowsLayoutV2";
+    public const string UpdateChannel = "Updates.Channel";
+
+    public static string HighestLauncherReleaseId(string channel, string runtimeIdentifier) =>
+        $"Updates.HighestReleaseId[{channel}][{runtimeIdentifier}]";
+
+    public static string FailedLauncherReleaseId(string channel, string runtimeIdentifier) =>
+        $"Updates.FailedReleaseId[{channel}][{runtimeIdentifier}]";
 
     public static string OptionalKnown(int modPackId, string name) =>
         $"Optional[{modPackId}][{name}].Known";

@@ -86,7 +86,7 @@ internal sealed class WindowsBepInExLaunchStrategy : IGameLaunchStrategy
         {
             if (customPack)
             {
-                progress?.Report(new LauncherProgress("Preparing Windows Doorstop injection…"));
+                progress?.Report(new LauncherProgress("Preparing Windows Doorstop injectionâ€¦"));
                 await deployment.BeginAsync(request.Persistent, cancellationToken);
                 string packRoot = ModPackService.GetPackRoot(
                     request.ModDataDirectory,
@@ -117,7 +117,7 @@ internal sealed class WindowsBepInExLaunchStrategy : IGameLaunchStrategy
             }
             else if (request.ModPackId == LauncherConstants.VanillaModPackId)
             {
-                progress?.Report(new LauncherProgress("Preparing a vanilla launch…"));
+                progress?.Report(new LauncherProgress("Preparing a vanilla launchâ€¦"));
                 await deployment.BeginAsync(request.Persistent, cancellationToken);
                 await deployment.DeployTextAsync(
                     CreateDisabledDoorstopConfiguration(),
@@ -151,7 +151,7 @@ internal sealed class WindowsBepInExLaunchStrategy : IGameLaunchStrategy
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            progress?.Report(new LauncherProgress("Starting Valheim…"));
+            progress?.Report(new LauncherProgress("Starting Valheimâ€¦"));
             int processId;
             if (request.UseSteam)
             {
@@ -179,7 +179,7 @@ internal sealed class WindowsBepInExLaunchStrategy : IGameLaunchStrategy
         {
             if (managedProfile && (!request.Persistent || !launchBegan))
             {
-                progress?.Report(new LauncherProgress("Restoring the original game files…"));
+                progress?.Report(new LauncherProgress("Restoring the original game filesâ€¦"));
                 await deployment.RestoreAsync(CancellationToken.None);
             }
         }

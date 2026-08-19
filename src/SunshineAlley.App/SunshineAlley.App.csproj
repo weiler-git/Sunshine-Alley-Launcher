@@ -9,7 +9,12 @@
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <UpdatePublisherSubject Condition="'$(UpdatePublisherSubject)' == ''">Sunshine Alley</UpdatePublisherSubject>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="UpdatePublisherSubject" Value="$(UpdatePublisherSubject)" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" />

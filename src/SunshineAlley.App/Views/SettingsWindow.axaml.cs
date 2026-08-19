@@ -60,12 +60,13 @@ public sealed partial class SettingsWindow : Window
     private async Task<string?> PickFolderAsync(string title, string current)
     {
         IStorageFolder? suggested = null;
-        if (!string.IsNullOrWhiteSpace(current) && Directory.Exists(current))
+        string? existing = FindExistingDirectory(current);
+        if (existing is not null)
         {
             var builder = new UriBuilder
             {
                 Scheme = Uri.UriSchemeFile,
-                Path = Path.GetFullPath(current)
+                Path = existing
             };
             suggested = await StorageProvider.TryGetFolderFromPathAsync(builder.Uri);
         }
@@ -78,6 +79,31 @@ public sealed partial class SettingsWindow : Window
                 SuggestedStartLocation = suggested
             });
         return folders.Count == 0 ? null : folders[0].Path.LocalPath;
+    }
+
+    private static string? FindExistingDirectory(string candidate)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return null;
+        }
+
+        try
+        {
+            DirectoryInfo? directory = new(Path.GetFullPath(candidate));
+            while (directory is not null && !directory.Exists)
+            {
+                directory = directory.Parent;
+            }
+
+            return directory?.FullName;
+        }
+        catch (Exception exception) when (exception is ArgumentException
+            or NotSupportedException
+            or PathTooLongException)
+        {
+            return null;
+        }
     }
 
     private async void Save_Click(object? sender, RoutedEventArgs eventArgs)

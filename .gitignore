@@ -27,6 +27,7 @@ ModPacks/
 *.cer
 *.key
 *.mobileprovision
+.release-secrets/
 
 # Generated packages
 *.dmg
