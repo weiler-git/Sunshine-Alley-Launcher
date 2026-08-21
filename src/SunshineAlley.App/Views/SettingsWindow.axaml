@@ -1,0 +1,60 @@
+<Window
+    x:Class="SunshineAlley.App.Views.SettingsWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:SunshineAlley.App.ViewModels"
+    x:DataType="vm:SettingsWindowViewModel"
+    Title="Launcher Settings"
+    Width="650"
+    Height="430"
+    MinWidth="540"
+    MinHeight="390"
+    Icon="/Assets/SA.ico"
+    WindowStartupLocation="CenterOwner">
+  <Grid Margin="28" RowDefinitions="Auto,Auto,Auto,*,Auto">
+    <TextBlock Text="Launcher settings" FontSize="23" FontWeight="SemiBold" />
+
+    <StackPanel Grid.Row="1" Margin="0,24,0,18">
+      <TextBlock Text="Valheim game directory" Classes="muted" />
+      <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
+        <TextBox
+            Text="{Binding GameDirectory}"
+            LostFocus="GameDirectory_LostFocus" />
+        <Button
+            Grid.Column="1"
+            Classes="secondary"
+            Margin="9,0,0,0"
+            Content="Browse…"
+            Click="BrowseGame_Click" />
+      </Grid>
+    </StackPanel>
+
+    <StackPanel Grid.Row="2">
+      <TextBlock Text="Mod data directory" Classes="muted" />
+      <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
+        <TextBox
+            Text="{Binding ModDataDirectory}"
+            LostFocus="ModDataDirectory_LostFocus" />
+        <Button
+            Grid.Column="1"
+            Classes="secondary"
+            Margin="9,0,0,0"
+            Content="Browse…"
+            Click="BrowseData_Click" />
+      </Grid>
+    </StackPanel>
+
+    <TextBlock
+        Grid.Row="3"
+        VerticalAlignment="Bottom"
+        Margin="0,22,0,0"
+        Text="{Binding Status}"
+        Classes="muted"
+        TextWrapping="Wrap" />
+
+    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,22,0,0">
+      <Button Classes="secondary" Content="Cancel" Click="Cancel_Click" />
+      <Button Classes="primary" Content="Save" Click="Save_Click" />
+    </StackPanel>
+  </Grid>
+</Window>

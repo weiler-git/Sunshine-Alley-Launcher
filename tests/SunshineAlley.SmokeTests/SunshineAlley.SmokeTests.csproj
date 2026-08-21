@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SunshineAlley.Core\SunshineAlley.Core.csproj" />
+    <ProjectReference Include="..\..\src\SunshineAlley.Platform\SunshineAlley.Platform.csproj" />
+  </ItemGroup>
+</Project>

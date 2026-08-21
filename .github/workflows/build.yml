@@ -1,0 +1,54 @@
+name: Cross-platform build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            rid: win-x64
+          - os: ubuntu-24.04
+            rid: linux-x64
+          - os: macos-15-intel
+            rid: osx-x64
+          - os: macos-15
+            rid: osx-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore "Sunshine Alley Launcher.sln"
+      - name: Build
+        run: dotnet build "Sunshine Alley Launcher.sln" -c Release --no-restore
+      - name: Smoke tests
+        run: dotnet run --project tests/SunshineAlley.SmokeTests/SunshineAlley.SmokeTests.csproj -c Release --no-restore
+      - name: Publish launcher
+        run: >-
+          dotnet publish src/SunshineAlley.App/SunshineAlley.App.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained true --no-restore
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=None -o artifacts/${{ matrix.rid }}/app
+      - name: Publish diagnostic CLI
+        run: >-
+          dotnet publish src/SunshineAlley.Cli/SunshineAlley.Cli.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained true --no-restore
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=None -o artifacts/${{ matrix.rid }}/tools
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SunshineAlleyLauncher-${{ matrix.rid }}
+          path: artifacts/${{ matrix.rid }}
+          if-no-files-found: error

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>SunshineAlleyLauncher</AssemblyName>
+    <RootNamespace>SunshineAlley.App</RootNamespace>
+    <Version>3.0.0</Version>
+    <ApplicationIcon>Assets\SA.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
+    <PublishTrimmed>false</PublishTrimmed>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <UpdatePublisherSubject Condition="'$(UpdatePublisherSubject)' == ''">Sunshine Alley</UpdatePublisherSubject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="UpdatePublisherSubject" Value="$(UpdatePublisherSubject)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SunshineAlley.Core\SunshineAlley.Core.csproj" />
+    <ProjectReference Include="..\SunshineAlley.Platform\SunshineAlley.Platform.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+</Project>

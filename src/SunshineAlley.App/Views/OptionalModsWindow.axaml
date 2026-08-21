@@ -1,0 +1,47 @@
+<Window
+    x:Class="SunshineAlley.App.Views.OptionalModsWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:SunshineAlley.App.ViewModels"
+    x:DataType="vm:OptionalModsWindowViewModel"
+    Title="Optional Mods"
+    Width="560"
+    Height="580"
+    MinWidth="450"
+    MinHeight="420"
+    Icon="/Assets/SA.ico"
+    WindowStartupLocation="CenterOwner">
+  <Grid Margin="26" RowDefinitions="Auto,Auto,*,Auto">
+    <TextBlock Text="{Binding ModPackTitle}" FontSize="22" FontWeight="SemiBold" />
+    <TextBlock
+        Grid.Row="1"
+        Margin="0,6,0,18"
+        Text="{Binding AffectedServers, StringFormat='Affected servers: {0}'}"
+        Classes="muted"
+        TextWrapping="Wrap" />
+
+    <Border Grid.Row="2" Classes="card" Padding="12">
+      <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Mods}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:OptionalModItemViewModel">
+              <CheckBox
+                  Margin="5,7"
+                  Content="{Binding Name}"
+                  IsChecked="{Binding Enabled}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,18,0,0">
+      <TextBlock
+          VerticalAlignment="Center"
+          Text="{Binding Status}"
+          Classes="muted"
+          TextWrapping="Wrap" />
+      <Button Grid.Column="1" Classes="primary" Content="Done" Click="Done_Click" />
+    </Grid>
+  </Grid>
+</Window>

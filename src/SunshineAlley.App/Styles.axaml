@@ -1,0 +1,33 @@
+<Styles xmlns="https://github.com/avaloniaui">
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="Inter" />
+    <Setter Property="Background" Value="#101719" />
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="#E8A93A" />
+    <Setter Property="Foreground" Value="#151A1B" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="22,11" />
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="#263438" />
+    <Setter Property="Foreground" Value="#F2F4F3" />
+    <Setter Property="Padding" Value="15,9" />
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="#E6152023" />
+    <Setter Property="BorderBrush" Value="#4C748086" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="20" />
+  </Style>
+
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="#A9B5B8" />
+  </Style>
+</Styles>
