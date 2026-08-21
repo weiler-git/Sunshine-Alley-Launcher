@@ -681,12 +681,12 @@ public sealed class LauncherUpdateService
         if (OperatingSystem.IsLinux())
         {
             string transactionRoot = Path.GetDirectoryName(planPath)!;
-            string helper = Path.Combine(transactionRoot, "update-helper");
-            File.Copy(GetCurrentExecutable(), helper, false);
-            LinuxInstallationService.SetExecutableMode(helper);
+            string linuxHelper = Path.Combine(transactionRoot, "update-helper");
+            File.Copy(GetCurrentExecutable(), linuxHelper, false);
+            LinuxInstallationService.SetExecutableMode(linuxHelper);
             var linuxStart = new ProcessStartInfo
             {
-                FileName = helper,
+                FileName = linuxHelper,
                 WorkingDirectory = Environment.GetFolderPath(
                     Environment.SpecialFolder.UserProfile),
                 UseShellExecute = false
