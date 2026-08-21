@@ -526,6 +526,38 @@ public static class PathSecurity
         return false;
     }
 
+    public static bool ContainsReparsePointUnderRoot(string root, string candidate)
+    {
+        string normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        string normalizedCandidate = Path.GetFullPath(candidate);
+        if (!IsUnderRoot(normalizedRoot, normalizedCandidate))
+        {
+            throw new ArgumentException(
+                "The candidate path is outside the supplied root.",
+                nameof(candidate));
+        }
+
+        string current = normalizedRoot;
+        if (HasReparsePointAttribute(current))
+        {
+            return true;
+        }
+
+        string relative = Path.GetRelativePath(normalizedRoot, normalizedCandidate);
+        foreach (string segment in relative.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+            if (HasReparsePointAttribute(current))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool HasReparsePointAttribute(string path)
     {
         try

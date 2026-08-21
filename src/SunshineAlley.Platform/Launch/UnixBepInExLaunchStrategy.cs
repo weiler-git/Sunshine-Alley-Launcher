@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using SunshineAlley.Core;
+using SunshineAlley.Platform.Storage;
 
 namespace SunshineAlley.Platform.Launch;
 
@@ -27,6 +28,22 @@ internal sealed class UnixBepInExLaunchStrategy : IGameLaunchStrategy
         if (executable is null)
         {
             problems.Add("The native Valheim executable was not found in the selected game directory.");
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            if (!HasAnyExecuteBit(File.GetUnixFileMode(executable)))
+            {
+                problems.Add("The native Valheim executable does not have executable permission.");
+            }
+
+            DirectoryValidationResult access = await DirectoryWriteAccess.ValidateAsync(
+                request.GameDirectory,
+                "Valheim game directory",
+                cancellationToken);
+            if (!access.IsValid)
+            {
+                problems.Add(access.Error!);
+            }
         }
 
         if (request.ModPackId > 0)
@@ -226,14 +243,28 @@ internal sealed class UnixBepInExLaunchStrategy : IGameLaunchStrategy
                 $"Refusing to write the launch wrapper through a symbolic link or junction: '{path}'.");
         }
 
-        await File.WriteAllTextAsync(path, content, cancellationToken);
-        File.SetUnixFileMode(
-            path,
-            UnixFileMode.UserRead
-            | UnixFileMode.UserWrite
-            | UnixFileMode.UserExecute
-            | UnixFileMode.GroupRead
-            | UnixFileMode.GroupExecute);
+        string temporary = Path.Combine(
+            Path.GetDirectoryName(path)!,
+            $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            await File.WriteAllTextAsync(temporary, content, cancellationToken);
+            File.SetUnixFileMode(
+                temporary,
+                UnixFileMode.UserRead
+                | UnixFileMode.UserWrite
+                | UnixFileMode.UserExecute
+                | UnixFileMode.GroupRead
+                | UnixFileMode.GroupExecute);
+            File.Move(temporary, path, true);
+        }
+        finally
+        {
+            if (File.Exists(temporary))
+            {
+                File.Delete(temporary);
+            }
+        }
     }
 
     private static IReadOnlyList<string> GetArguments(GameLaunchRequest request)
@@ -275,4 +306,9 @@ internal sealed class UnixBepInExLaunchStrategy : IGameLaunchStrategy
 
     private static string ShellQuote(string value) =>
         "'" + value.Replace("'", "'\"'\"'", StringComparison.Ordinal) + "'";
+
+    private static bool HasAnyExecuteBit(UnixFileMode mode) =>
+        (mode & (UnixFileMode.UserExecute
+            | UnixFileMode.GroupExecute
+            | UnixFileMode.OtherExecute)) != 0;
 }

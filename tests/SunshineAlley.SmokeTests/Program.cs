@@ -4,6 +4,7 @@ using System.Text.Json;
 using SunshineAlley.Core;
 using SunshineAlley.Platform;
 using SunshineAlley.Platform.Identity;
+using SunshineAlley.Platform.Installation;
 using SunshineAlley.Platform.Storage;
 using SunshineAlley.Platform.Update;
 
@@ -24,9 +25,15 @@ internal static class Program
             await UnsafeModDataRootIsRejectedAsync(temporaryRoot);
             SymlinkIsRejected(temporaryRoot);
             await SettingsRoundTripAsync(temporaryRoot);
+            await LauncherPathPreferencesRoundTripAsync(temporaryRoot);
             await HashingAsync(temporaryRoot);
             RsaXmlCompatibility();
             SignedUpdateManifest();
+            LinuxXdgLayouts(temporaryRoot);
+            LinuxDesktopEntry();
+            MandatoryUpdatePolicy();
+            LinuxInstallDetection(temporaryRoot);
+            LinuxUpdateReplacement(temporaryRoot);
             WindowsDefaultLayout();
             Console.WriteLine("All smoke tests passed.");
             return 0;
@@ -98,6 +105,28 @@ internal static class Program
         await store.SetAsync("Flag", true);
         Assert(await store.GetAsync<string>("Text") == "value", "String setting round-trip failed.");
         Assert(await store.GetAsync<bool?>("Flag") == true, "Boolean setting round-trip failed.");
+    }
+
+    private static async Task LauncherPathPreferencesRoundTripAsync(string root)
+    {
+        string settingsFile = Path.Combine(root, "preferences", "settings.json");
+        var settings = new LauncherSettings(
+            new JsonSettingsStore(settingsFile),
+            Path.Combine(root, "default data"));
+        var expected = new LauncherPreferences(
+            Path.Combine(root, "managed mods with spaces"),
+            Path.Combine(root, "Valheim native with spaces"),
+            true,
+            false,
+            "Example World");
+        await settings.SaveAsync(expected);
+        LauncherPreferences actual = await settings.LoadAsync();
+        Assert(
+            actual.ModDataDirectory == expected.ModDataDirectory,
+            "The managed-mod path was not persisted.");
+        Assert(
+            actual.GameDirectory == expected.GameDirectory,
+            "The native game path was not persisted.");
     }
 
     private static async Task HashingAsync(string root)
@@ -209,6 +238,297 @@ internal static class Program
             !PathSecurity.IsUnderRoot(paths.ApplicationDirectory, paths.DataDirectory)
             && !PathSecurity.IsUnderRoot(paths.DataDirectory, paths.ApplicationDirectory),
             "Windows App and Data defaults must be separate sibling directories.");
+    }
+
+    private static void LinuxXdgLayouts(string root)
+    {
+        string home = Path.Combine(root, "home");
+        PlatformPaths defaults = PlatformPaths.CreateLinux(home, _ => null);
+        Assert(
+            defaults.ApplicationDirectory == Path.Combine(
+                home,
+                ".local",
+                "share",
+                "sunshine-alley",
+                "launcher"),
+            "Linux application path must use the XDG data fallback.");
+        Assert(
+            defaults.SettingsFile == Path.Combine(
+                home,
+                ".config",
+                "sunshine-alley",
+                "launcher",
+                "settings.json"),
+            "Linux settings path must use the XDG config fallback.");
+        Assert(
+            defaults.UpdateCacheDirectory == Path.Combine(
+                home,
+                ".cache",
+                "sunshine-alley",
+                "launcher",
+                "Updates"),
+            "Linux updates must use the XDG cache fallback.");
+        Assert(
+            defaults.StateDirectory == Path.Combine(
+                home,
+                ".local",
+                "state",
+                "sunshine-alley",
+                "launcher"),
+            "Linux state must use the XDG state fallback.");
+        Assert(
+            defaults.LinuxDesktopEntryPath == Path.Combine(
+                home,
+                ".local",
+                "share",
+                "applications",
+                PlatformPaths.LinuxApplicationId + ".desktop"),
+            "Linux desktop integration must use XDG_DATA_HOME/applications.");
+
+        var variables = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["XDG_CONFIG_HOME"] = Path.Combine(root, "custom config"),
+            ["XDG_DATA_HOME"] = Path.Combine(root, "custom data"),
+            ["XDG_CACHE_HOME"] = Path.Combine(root, "custom cache"),
+            ["XDG_STATE_HOME"] = Path.Combine(root, "custom state")
+        };
+        PlatformPaths custom = PlatformPaths.CreateLinux(
+            home,
+            name => variables.GetValueOrDefault(name));
+        Assert(
+            custom.ApplicationDirectory == Path.Combine(
+                variables["XDG_DATA_HOME"]!,
+                "sunshine-alley",
+                "launcher"),
+            "Customized XDG_DATA_HOME was not honored.");
+        Assert(
+            custom.ConfigurationDirectory.StartsWith(
+                variables["XDG_CONFIG_HOME"]!,
+                StringComparison.Ordinal),
+            "Customized XDG_CONFIG_HOME was not honored.");
+        Assert(
+            custom.CacheDirectory.StartsWith(
+                variables["XDG_CACHE_HOME"]!,
+                StringComparison.Ordinal),
+            "Customized XDG_CACHE_HOME was not honored.");
+        Assert(
+            custom.StateDirectory.StartsWith(
+                variables["XDG_STATE_HOME"]!,
+                StringComparison.Ordinal),
+            "Customized XDG_STATE_HOME was not honored.");
+
+        variables["XDG_DATA_HOME"] = "relative-data";
+        PlatformPaths invalid = PlatformPaths.CreateLinux(
+            home,
+            name => variables.GetValueOrDefault(name));
+        Assert(
+            invalid.ApplicationDirectory.StartsWith(
+                Path.Combine(home, ".local", "share"),
+                StringComparison.Ordinal),
+            "A relative XDG_DATA_HOME must be ignored.");
+
+        variables["XDG_DATA_HOME"] = "invalid\0data";
+        PlatformPaths malformed = PlatformPaths.CreateLinux(
+            home,
+            name => variables.GetValueOrDefault(name));
+        Assert(
+            malformed.ApplicationDirectory.StartsWith(
+                Path.Combine(home, ".local", "share"),
+                StringComparison.Ordinal),
+            "A malformed XDG_DATA_HOME must be ignored.");
+    }
+
+    private static void LinuxDesktopEntry()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        string entry = LinuxDesktopIntegration.CreateDesktopEntry(
+            "/home/player/Applications with spaces 100%/SunshineAlleyLauncher",
+            "/home/player/icons with spaces/sunshine.png");
+        Assert(
+            entry.Contains(
+                "Exec=\"/home/player/Applications with spaces 100%%/SunshineAlleyLauncher\"",
+                StringComparison.Ordinal),
+            "The desktop Exec path must be safely quoted and escape field-code markers.");
+        Assert(
+            entry.Contains("Terminal=false", StringComparison.Ordinal)
+            && entry.Contains("Categories=Game;", StringComparison.Ordinal),
+            "The Linux desktop entry is incomplete.");
+    }
+
+    private static void MandatoryUpdatePolicy()
+    {
+        var manifest = new LauncherUpdateManifest
+        {
+            SchemaVersion = 1,
+            UpdateAvailable = true,
+            ReleaseId = 8,
+            Version = "3.2.0",
+            RuntimeIdentifier = "linux-x64",
+            Channel = "stable",
+            MinimumVersion = "3.0.0",
+            MinimumSupportedVersion = "3.1.0",
+            PublishedUtc = DateTimeOffset.UtcNow,
+            Package = new LauncherUpdatePackage
+            {
+                Url = "https://sunshinealley.games/launcher/releases/3.2.0/linux-x64/SunshineAlleyLauncher",
+                Size = 123,
+                Sha256 = new string('b', 64)
+            }
+        };
+        Assert(
+            LauncherUpdatePolicy.IsCurrentVersionUnsupported(manifest, "3.0.9"),
+            "A version below minimumSupportedVersion must be blocked.");
+        Assert(
+            !LauncherUpdatePolicy.IsCurrentVersionUnsupported(manifest, "3.1.0"),
+            "The minimum supported version itself must remain supported.");
+        string? remembered = LauncherUpdatePolicy.SelectHigherMinimumSupportedVersion(
+            "3.2.0",
+            "3.1.0");
+        Assert(
+            remembered == "3.2.0"
+            && LauncherUpdatePolicy.IsCurrentVersionUnsupported(
+                remembered,
+                "3.1.9"),
+            "A remembered signed minimum-supported floor must not be lowered by replay.");
+    }
+
+    private static void LinuxInstallDetection(string root)
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        string testRoot = Path.Combine(root, "linux-install-detection");
+        PlatformPaths paths = CreateTestLinuxPaths(testRoot);
+        string downloaded = Path.Combine(testRoot, "Downloads", "SunshineAlleyLauncher");
+        Directory.CreateDirectory(Path.GetDirectoryName(downloaded)!);
+        File.WriteAllText(downloaded, "downloaded");
+        LinuxInstallationService.SetExecutableMode(downloaded);
+
+        var downloadedService = new LinuxInstallationService(paths, () => downloaded);
+        Assert(
+            !downloadedService.Inspect().IsInstalled,
+            "A Linux installation must not exist before its executable and marker.");
+
+        Directory.CreateDirectory(paths.ApplicationDirectory);
+        File.WriteAllText(paths.LinuxExecutablePath, "installed");
+        LinuxInstallationService.SetExecutableMode(paths.LinuxExecutablePath);
+        File.WriteAllText(
+            paths.InstallationMarkerFile,
+            JsonSerializer.Serialize(new InstallationMarker(
+                LauncherInstallationConstants.ProductId,
+                LauncherInstallationConstants.LayoutVersion,
+                "3.0.0",
+                "linux-x64")));
+        InstallationInspection external = downloadedService.Inspect();
+        Assert(
+            external.IsInstalled && !external.IsCurrentExecutable,
+            "A downloaded Linux copy must detect the existing fixed installation.");
+
+        var installedService = new LinuxInstallationService(
+            paths,
+            () => paths.LinuxExecutablePath);
+        Assert(
+            installedService.Inspect().IsCurrentExecutable,
+            "The fixed Linux executable must detect itself as installed.");
+    }
+
+    private static void LinuxUpdateReplacement(string root)
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        string testRoot = Path.Combine(root, "linux update with spaces");
+        PlatformPaths paths = CreateTestLinuxPaths(testRoot);
+        string transactionId = Guid.NewGuid().ToString("N");
+        string transaction = Path.Combine(paths.UpdateCacheDirectory, transactionId);
+        Directory.CreateDirectory(paths.ApplicationDirectory);
+        Directory.CreateDirectory(transaction);
+        string installed = paths.LinuxExecutablePath;
+        string staged = Path.Combine(
+            transaction,
+            LauncherInstallationConstants.LinuxExecutableFileName + ".new");
+        File.WriteAllText(installed, "old launcher");
+        File.WriteAllText(staged, "new launcher");
+        LinuxInstallationService.SetExecutableMode(installed);
+        LinuxInstallationService.SetExecutableMode(staged);
+
+        string oldHash = Hash(installed);
+        string newHash = Hash(staged);
+        var plan = new LauncherUpdatePlan
+        {
+            ProductId = LauncherInstallationConstants.ProductId,
+            TransactionId = transactionId,
+            WaitForProcessId = Environment.ProcessId,
+            InstalledExecutable = installed,
+            StagedExecutable = staged,
+            BackupExecutable = Path.Combine(
+                paths.ApplicationDirectory,
+                $".{LauncherInstallationConstants.LinuxExecutableFileName}.{transactionId}.previous"),
+            ConfirmationFile = Path.Combine(transaction, "confirmed"),
+            ExpectedSha256 = newHash,
+            ExpectedPreviousSha256 = oldHash,
+            Version = "3.1.0",
+            ReleaseId = 2,
+            Channel = "stable",
+            RuntimeIdentifier = "linux-x64"
+        };
+
+        LinuxUpdateFileTransaction.Apply(plan);
+        Assert(File.ReadAllText(installed) == "new launcher", "Linux update replacement failed.");
+        Assert(
+            (File.GetUnixFileMode(installed) & UnixFileMode.UserExecute) != 0,
+            "Linux update replacement lost executable permission.");
+        LinuxUpdateFileTransaction.RollBack(plan);
+        Assert(File.ReadAllText(installed) == "old launcher", "Linux update rollback failed.");
+
+        File.Delete(plan.BackupExecutable);
+        File.WriteAllText(staged, "corrupt launcher");
+        LinuxInstallationService.SetExecutableMode(staged);
+        bool rejected = false;
+        try
+        {
+            LinuxUpdateFileTransaction.Apply(plan);
+        }
+        catch (LauncherException)
+        {
+            rejected = true;
+        }
+
+        Assert(rejected, "A corrupted staged Linux update must be rejected.");
+        Assert(
+            File.ReadAllText(installed) == "old launcher",
+            "Failed Linux update verification corrupted the installed launcher.");
+        Assert(
+            !File.Exists(plan.BackupExecutable),
+            "A pre-replacement Linux update failure left a blocking rollback file.");
+    }
+
+    private static PlatformPaths CreateTestLinuxPaths(string root)
+    {
+        string product = Path.Combine(root, "data", "sunshine-alley");
+        string state = Path.Combine(root, "state", "sunshine-alley", "launcher");
+        return new PlatformPaths(
+            product,
+            Path.Combine(product, "launcher"),
+            Path.Combine(root, "config", "sunshine-alley", "launcher"),
+            Path.Combine(product, "data"),
+            Path.Combine(root, "cache", "sunshine-alley", "launcher"),
+            state,
+            Path.Combine(state, "logs"));
+    }
+
+    private static string Hash(string path)
+    {
+        using FileStream stream = File.OpenRead(path);
+        return Convert.ToHexStringLower(SHA256.HashData(stream));
     }
 
     private static string Element(string name, byte[]? value) =>

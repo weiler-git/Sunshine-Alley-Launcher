@@ -23,6 +23,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     private Task? _refreshLoop;
     private bool _shutdownRequested;
     private bool _postUpdateConfirmed;
+    private bool _launcherUpdateRequired;
     private string _persistentNotice = string.Empty;
 
     public MainWindowViewModel()
@@ -160,6 +161,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 
     public bool CanPlay =>
         !IsBusy
+        && !_launcherUpdateRequired
         && SelectedServer is not null
         && (SelectedServer.ModPackId <= 0
             || (_runtime?.ModPacks.GetState(SelectedServer.ModPackId).IsVerified ?? false));
@@ -273,6 +275,9 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             LauncherUpdateCheckResult result = await _runtime.Updates.CheckAndLaunchAsync(
                 progress,
                 _shutdown.Token);
+            _launcherUpdateRequired = result.IsMandatoryUpdate;
+            OnPropertyChanged(nameof(CanPlay));
+            RaiseCommandStates();
             Status = result.Message;
             if (result.HelperStarted)
             {
@@ -281,7 +286,12 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
                 return true;
             }
 
-            if (result.UpdateAvailable)
+            if (result.IsMandatoryUpdate)
+            {
+                _persistentNotice = result.Message;
+                Notice = _persistentNotice;
+            }
+            else if (result.UpdateAvailable)
             {
                 _persistentNotice = result.Message;
                 Notice = _persistentNotice;
@@ -294,6 +304,19 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            if (_runtime.Updates.IsCurrentVersionExplicitlyUnsupported)
+            {
+                _launcherUpdateRequired = true;
+                OnPropertyChanged(nameof(CanPlay));
+                RaiseCommandStates();
+                _persistentNotice =
+                    "A signed release policy requires a launcher update, so game launch is blocked until the update succeeds. "
+                    + exception.Message;
+                Notice = _persistentNotice;
+                Status = "Required launcher update failed.";
+                return false;
+            }
+
             if (automatic)
             {
                 _persistentNotice = "Launcher update check failed; game launching remains available. "
@@ -579,6 +602,12 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         if (_runtime is null || SelectedServer is null)
         {
             return;
+        }
+
+        if (_launcherUpdateRequired)
+        {
+            throw new LauncherException(
+                "This launcher version has been declared unsupported by a signed release policy. Complete the required launcher update before starting Valheim.");
         }
 
         if (SelectedServer.ModPackId > 0)

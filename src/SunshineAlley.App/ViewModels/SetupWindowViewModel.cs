@@ -12,7 +12,7 @@ public enum SetupIntent
 
 public sealed class SetupWindowViewModel : ViewModelBase
 {
-    private readonly WindowsInstallationService _installation;
+    private readonly ILauncherInstallationService _installation;
     private string _applicationDirectory;
     private string _dataDirectory;
     private string _gameDirectory = string.Empty;
@@ -26,7 +26,7 @@ public sealed class SetupWindowViewModel : ViewModelBase
     private bool _confirmUninstall;
 
     public SetupWindowViewModel(
-        WindowsInstallationService installation,
+        ILauncherInstallationService installation,
         SetupIntent intent)
     {
         _installation = installation;
@@ -50,8 +50,16 @@ public sealed class SetupWindowViewModel : ViewModelBase
         || (Intent == SetupIntent.Install && Inspection.IsInstalled);
     public bool IsUninstall => Intent == SetupIntent.Uninstall;
     public bool ShowsInstallOptions => !IsUninstall;
+    public bool ShowsApplicationDirectory => _installation.CanChooseApplicationDirectory;
+    public bool ShowsFixedApplicationDirectoryNote =>
+        !_installation.CanChooseApplicationDirectory;
+    public bool ShowsWindowsShortcutOptions => _installation.ShowsWindowsShortcutOptions;
     public bool IsLegacyMigration => Inspection.IsLegacyLaunch;
-    public bool CanChangeApplicationDirectory => !Inspection.IsInstalled;
+    public bool CanChangeApplicationDirectory =>
+        _installation.CanChooseApplicationDirectory && !Inspection.IsInstalled;
+    public string FixedApplicationDirectoryNote =>
+        $"Launcher files will be installed for this user at {ApplicationDirectory}.";
+    public string UninstallDescription => _installation.UninstallDescription;
     public string Heading => IsUninstall
         ? "Uninstall Sunshine Alley"
         : IsRepair

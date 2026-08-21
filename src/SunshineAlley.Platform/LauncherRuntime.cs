@@ -91,7 +91,8 @@ public sealed class LauncherRuntime : IAsyncDisposable
         var steam = new SteamService();
         var shell = new ShellService();
         var settings = new LauncherSettings(settingsStore, paths.DataDirectory);
-        var modDataDirectories = new ModDataDirectoryPolicy();
+        var modDataDirectories = new ModDataDirectoryPolicy(
+            OperatingSystem.IsLinux() ? paths.ApplicationDirectory : null);
         var servers = new ServerCatalogService(api);
         var modPacks = new ModPackService(api, httpClient, settingsStore);
         var gameLauncher = new BepInExGameLaunchService(steam);

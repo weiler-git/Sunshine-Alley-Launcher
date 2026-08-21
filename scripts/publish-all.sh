@@ -41,9 +41,10 @@ for rid in win-x64 linux-x64 osx-x64 osx-arm64; do
       (cd "${publish_dir}" && zip -q -r "${package}" .)
       ;;
     linux-*)
-      package="${artifacts_dir}/packages/SunshineAlleyLauncher-${rid}.tar.gz"
-      cp "${project_root}/build/packaging/linux/sunshine-alley-launcher.desktop" "${publish_dir}/"
-      tar -C "${publish_dir}" -czf "${package}" .
+      package="${artifacts_dir}/packages/SunshineAlleyLauncher-${rid}"
+      chmod u=rwx,go= "${publish_dir}/app/SunshineAlleyLauncher"
+      cp "${publish_dir}/app/SunshineAlleyLauncher" "${package}"
+      chmod u=rwx,go= "${package}"
       ;;
     osx-*)
       bundle="${artifacts_dir}/publish/${rid}/Sunshine Alley Launcher.app"
@@ -57,4 +58,4 @@ for rid in win-x64 linux-x64 osx-x64 osx-arm64; do
   esac
 done
 
-echo "Packages written to ${artifacts_dir}/packages"
+echo "Packages and directly downloadable Linux launchers written to ${artifacts_dir}/packages"

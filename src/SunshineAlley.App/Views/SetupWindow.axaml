@@ -24,7 +24,7 @@
 
       <Border Grid.Row="1" Classes="card" Margin="0,24,0,0" IsVisible="{Binding ShowsInstallOptions}">
         <StackPanel Spacing="14">
-          <StackPanel>
+          <StackPanel IsVisible="{Binding ShowsApplicationDirectory}">
             <TextBlock Text="Application directory" Classes="muted" />
             <Grid ColumnDefinitions="*,Auto" Margin="0,5,0,0">
               <TextBox
@@ -39,6 +39,12 @@
                   Click="BrowseApp_Click" />
             </Grid>
           </StackPanel>
+
+          <TextBlock
+              IsVisible="{Binding ShowsFixedApplicationDirectoryNote}"
+              Text="{Binding FixedApplicationDirectoryNote}"
+              Classes="muted"
+              TextWrapping="Wrap" />
 
           <StackPanel>
             <TextBlock Text="Mod-data directory" Classes="muted" />
@@ -56,7 +62,10 @@
             </Grid>
           </StackPanel>
 
-          <StackPanel Orientation="Horizontal" Spacing="22">
+          <StackPanel
+              IsVisible="{Binding ShowsWindowsShortcutOptions}"
+              Orientation="Horizontal"
+              Spacing="22">
             <CheckBox Content="Start Menu shortcut" IsChecked="{Binding CreateStartMenuShortcut}" />
             <CheckBox Content="Desktop shortcut" IsChecked="{Binding CreateDesktopShortcut}" />
           </StackPanel>
@@ -71,14 +80,14 @@
       <Border Grid.Row="1" Classes="card" Margin="0,24,0,0" IsVisible="{Binding IsUninstall}">
         <StackPanel Spacing="14">
           <TextBlock
-              Text="The application, shortcuts, update cache, and Windows installation registration will be removed. Device identity credentials are preserved."
+              Text="{Binding UninstallDescription}"
               TextWrapping="Wrap" />
           <CheckBox
               IsChecked="{Binding RemoveDataOnUninstall}"
               Content="Also remove downloaded ModPacks and launcher data" />
           <CheckBox
               IsChecked="{Binding RemoveConfigurationOnUninstall}"
-              Content="Also remove settings (RSA credential remains in Windows Credential Manager)" />
+              Content="Also remove settings (the OS credential-store RSA key is preserved)" />
           <CheckBox
               IsChecked="{Binding ConfirmUninstall}"
               Content="I understand and want to uninstall Sunshine Alley Launcher" />

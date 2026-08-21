@@ -11,5 +11,8 @@
     <EmbeddedResource
         Include="Update\update-public-key.pem"
         LogicalName="SunshineAlley.UpdatePublicKey.pem" />
+    <EmbeddedResource
+        Include="Installation\linux-icon.png"
+        LogicalName="SunshineAlley.LinuxIcon.png" />
   </ItemGroup>
 </Project>

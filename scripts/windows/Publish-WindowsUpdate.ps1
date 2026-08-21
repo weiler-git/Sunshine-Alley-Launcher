@@ -17,6 +17,8 @@ param(
     [string]$Channel = 'stable',
     [ValidatePattern('^\d+\.\d+\.\d+$')]
     [string]$MinimumVersion = '3.0.0',
+    [ValidatePattern('^\d+\.\d+\.\d+$')]
+    [string]$MinimumSupportedVersion,
     [string]$PublisherSubject = 'Sunshine Alley',
     [ValidatePattern('^[0-9A-Fa-f]{40}$')]
     [string]$CodeSigningCertificateThumbprint,
@@ -25,6 +27,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($MinimumSupportedVersion)) {
+    $MinimumSupportedVersion = $null
+}
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $Solution = Join-Path $ProjectRoot 'Sunshine Alley Launcher.sln'
 $AppProject = Join-Path $ProjectRoot 'src/SunshineAlley.App/SunshineAlley.App.csproj'
@@ -40,6 +45,14 @@ $ReleaseExecutable = Join-Path $ReleaseStaging 'SunshineAlleyLauncher.exe'
 
 if ($PSVersionTable.PSVersion.Major -lt 7) {
     throw 'PowerShell 7 or later is required.'
+}
+$ReleaseVersion = [Version]$Version
+if ([Version]$MinimumVersion -gt $ReleaseVersion) {
+    throw 'MinimumVersion cannot be newer than the release Version.'
+}
+if (-not [string]::IsNullOrWhiteSpace($MinimumSupportedVersion) -and
+    [Version]$MinimumSupportedVersion -gt $ReleaseVersion) {
+    throw 'MinimumSupportedVersion cannot be newer than the release Version.'
 }
 if (-not (Test-Path $PrivateKeyPath)) {
     throw "Release manifest private key not found. Run scripts/windows/Initialize-UpdateSigning.ps1 first."
@@ -216,6 +229,19 @@ public static class SunshineManifestSigner
                 RSASignaturePadding.Pkcs1);
         }
     }
+
+    public static bool Verify(string publicKeyPath, byte[] payload, byte[] signature)
+    {
+        using (RSA rsa = RSA.Create())
+        {
+            rsa.ImportFromPem(File.ReadAllText(publicKeyPath));
+            return rsa.VerifyData(
+                payload,
+                signature,
+                HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1);
+        }
+    }
 }
 '@
 }
@@ -229,6 +255,12 @@ function New-SignedEnvelope {
     $PayloadJson = $Payload | ConvertTo-Json -Depth 10 -Compress
     $PayloadBytes = [System.Text.UTF8Encoding]::new($false).GetBytes($PayloadJson)
     $Signature = [SunshineManifestSigner]::Sign($PrivateKeyPath, $PayloadBytes)
+    if (-not [SunshineManifestSigner]::Verify(
+        $PublicKeyPath,
+        $PayloadBytes,
+        $Signature)) {
+        throw 'The offline private key does not match the public key embedded in the launcher.'
+    }
 
     $Envelope = [ordered]@{
         payload = [Convert]::ToBase64String($PayloadBytes)
@@ -247,6 +279,7 @@ $UpdatePayload = [ordered]@{
     runtimeIdentifier = 'win-x64'
     channel = $Channel
     minimumVersion = $MinimumVersion
+    minimumSupportedVersion = $MinimumSupportedVersion
     publishedUtc = $PublishedUtc
     package = [ordered]@{
         url = $PackageUrl
@@ -262,6 +295,7 @@ $NoUpdatePayload = [ordered]@{
     runtimeIdentifier = 'win-x64'
     channel = $Channel
     minimumVersion = $MinimumVersion
+    minimumSupportedVersion = $MinimumSupportedVersion
     publishedUtc = $PublishedUtc
     package = $null
 }
@@ -275,6 +309,7 @@ $ServerRecord = [ordered]@{
     releaseId = $ReleaseId
     version = $Version
     minimumVersion = $MinimumVersion
+    minimumSupportedVersion = $MinimumSupportedVersion
     executableFile = 'SunshineAlleyLauncher.exe'
     updateEnvelopeFile = 'update.envelope.json'
     noUpdateEnvelopeFile = 'no-update.envelope.json'

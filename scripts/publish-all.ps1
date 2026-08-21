@@ -35,7 +35,10 @@ foreach ($Rid in @('win-x64', 'linux-x64', 'osx-x64', 'osx-arm64')) {
     if ($LASTEXITCODE -ne 0) { throw "CLI publish failed for $Rid" }
 
     if ($Rid.StartsWith('linux-')) {
-        Copy-Item (Join-Path $ProjectRoot 'build/packaging/linux/sunshine-alley-launcher.desktop') $PublishRoot
+        $LinuxExecutable = Join-Path $AppOutput 'SunshineAlleyLauncher'
+        $Package = Join-Path $Artifacts "packages/SunshineAlleyLauncher-$Rid"
+        Copy-Item $LinuxExecutable $Package -Force
+        continue
     }
     elseif ($Rid.StartsWith('osx-')) {
         $Bundle = Join-Path $PublishRoot 'Sunshine Alley Launcher.app'
@@ -51,4 +54,4 @@ foreach ($Rid in @('win-x64', 'linux-x64', 'osx-x64', 'osx-arm64')) {
     Compress-Archive -Path (Join-Path $PublishRoot '*') -DestinationPath $Package
 }
 
-Write-Host "Packages written to $(Join-Path $Artifacts 'packages')"
+Write-Host "Packages and directly downloadable Linux launchers written to $(Join-Path $Artifacts 'packages')"

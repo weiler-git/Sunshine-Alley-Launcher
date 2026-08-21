@@ -6,7 +6,7 @@ namespace SunshineAlley.Platform.Storage;
 public sealed class ModDataDirectoryPolicy : IModDataDirectoryPolicy
 {
     public const string MarkerFileName = ".sunshine-alley-root";
-    private const string MarkerContents = "Sunshine Alley Launcher managed mod-data root\nversion=1\n";
+    internal const string MarkerContents = "Sunshine Alley Launcher managed mod-data root\nversion=1\n";
 
     private static readonly HashSet<string> AdoptableEntries = new(
         [

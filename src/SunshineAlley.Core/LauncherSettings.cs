@@ -18,6 +18,11 @@ public static class SettingsKeys
     public static string FailedLauncherReleaseId(string channel, string runtimeIdentifier) =>
         $"Updates.FailedReleaseId[{channel}][{runtimeIdentifier}]";
 
+    public static string MinimumSupportedLauncherVersion(
+        string channel,
+        string runtimeIdentifier) =>
+        $"Updates.MinimumSupportedVersion[{channel}][{runtimeIdentifier}]";
+
     public static string OptionalKnown(int modPackId, string name) =>
         $"Optional[{modPackId}][{name}].Known";
 

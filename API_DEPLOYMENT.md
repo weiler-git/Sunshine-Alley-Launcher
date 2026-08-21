@@ -48,7 +48,7 @@ The decoded request JSON is:
 Validation requirements:
 
 - `Version` must be a supported semantic/numeric version string;
-- `RuntimeIdentifier` must match an enabled release target;
+- `RuntimeIdentifier` must match an enabled release target (`win-x64` and `linux-x64` for the current release matrix);
 - `Channel` must be 1-32 ASCII letters/digits/hyphen/underscore and allow-listed (`development`, `stable`, and any intentionally added channel);
 - `ExecutableHash` must be exactly 64 hexadecimal characters;
 - `LayoutVersion` must be a supported positive integer;
@@ -85,6 +85,7 @@ An update payload has this schema:
   "runtimeIdentifier": "win-x64",
   "channel": "development",
   "minimumVersion": "3.0.0",
+  "minimumSupportedVersion": "3.0.0",
   "publishedUtc": "2026-08-19T12:00:00.0000000+00:00",
   "package": {
     "url": "https://sunshinealley.games/launcher/releases/3.1.0/win-x64/SunshineAlleyLauncher.exe",
@@ -105,12 +106,20 @@ A no-update payload is also signed:
   "runtimeIdentifier": "win-x64",
   "channel": "development",
   "minimumVersion": "3.0.0",
+  "minimumSupportedVersion": "3.0.0",
   "publishedUtc": "2026-08-19T12:00:00.0000000+00:00",
   "package": null
 }
 ```
 
 Never return a blank body, HTML error page, bare URL, or literal `OK` from the V3 operation.
+
+`minimumVersion` and `minimumSupportedVersion` have deliberately different meanings:
+
+- `minimumVersion` is the oldest source/bridge launcher that can safely consume this particular release package;
+- `minimumSupportedVersion` is product policy: a lower launcher is explicitly unsupported and must not launch the game.
+
+`minimumSupportedVersion` is optional for backward compatibility. When it is null, V3 retains the earlier fail-open support policy. When present, it is covered by the offline manifest signature; do not inject or alter it in the online API handler.
 
 ## 4. Server-side selection algorithm
 
@@ -128,10 +137,14 @@ if request version >= active version OR request executable hash == active SHA-25
     return exact bytes of active no-update.envelope.json
 
 if request version < active minimumVersion:
-    return a controlled error directing the client through the bridge release
+    select and return a signed compatible bridge release for this RID/channel
 
 return exact bytes of active update.envelope.json
 ```
+
+A plain controlled error cannot declare a launcher unsupported because it is not an offline-signed release policy. If a source version is below the active release's `minimumVersion`, the server needs a retained signed bridge release whose own `minimumVersion` permits that source. That bridge can then advance the client to a version capable of consuming the active release. Until a bridge chain is implemented, keep `minimumVersion` low enough for every deployed V3 build that may still check in.
+
+Set `minimumSupportedVersion` only to a version that has a working signed update/bridge path for every still-supported RID. It must not be newer than the release's own `version`. The Linux/Windows clients retain the highest signed boundary seen for each channel/RID and disable game launch whenever their current version is below it, including after a later offline start or failed download/replacement.
 
 Use a real version parser; do not compare versions lexically. `3.10.0` is newer than `3.9.0`.
 
@@ -154,15 +167,22 @@ Use immutable, versioned public paths:
 ```text
 /srv/sunshine-alley/launcher/releases/
 └── 3.1.0/
-    └── win-x64/
-        ├── SunshineAlleyLauncher.exe
+    ├── win-x64/
+    │   ├── SunshineAlleyLauncher.exe
+    │   ├── update.envelope.json
+    │   ├── no-update.envelope.json
+    │   └── server-release.json
+    └── linux-x64/
+        ├── SunshineAlleyLauncher
         ├── update.envelope.json
         ├── no-update.envelope.json
         └── server-release.json
 
 /srv/sunshine-alley/launcher/active/
 ├── development-win-x64.json
-└── stable-win-x64.json
+├── stable-win-x64.json
+├── development-linux-x64.json
+└── stable-linux-x64.json
 ```
 
 Expose only the release executable through the public HTTPS path. Envelope files may be returned by the API from non-public storage. `server-release.json` is deployment metadata, not a client response.
@@ -183,20 +203,20 @@ Activate a release by atomically replacing only this small active record after a
 
 ## 6. Deployment procedure
 
-The release operator produces the four files with `scripts/windows/Publish-WindowsUpdate.ps1`; see `WINDOWS_RELEASE.md` for signing and publishing.
+The release operator produces four files per RID with `scripts/windows/Publish-WindowsUpdate.ps1` or `scripts/linux/Publish-LinuxUpdate.ps1`. See `WINDOWS_RELEASE.md` and `LINUX_RELEASE.md` for platform-specific signing, publishing, and acceptance steps.
 
 On the API/static-file server:
 
 1. Create a new immutable version/RID directory.
-2. Upload `SunshineAlleyLauncher.exe`, both envelope files, and `server-release.json`.
+2. Upload the RID's raw launcher (`SunshineAlleyLauncher.exe` for Windows or `SunshineAlleyLauncher` for Linux), both envelope files, and `server-release.json`.
 3. Recalculate the executable SHA-256 and size on the server.
 4. Compare them with `server-release.json` and the decoded, signature-verified update payload.
 5. Confirm the executable is served as bytes without compression/transformation.
 6. Confirm the public URL is HTTPS and stays on `sunshinealley.games`; redirects to another host are rejected by the client.
 7. Call the new API as an allow-listed development device and verify the exact stored envelope is returned.
-8. Download the public EXE URL and verify its hash again.
-9. Atomically point `development-win-x64.json` at the new directory.
-10. After the complete Windows test matrix passes, repeat activation for `stable` using a production-signed release.
+8. Download the public raw launcher URL and verify its hash again.
+9. Atomically point the matching channel/RID active record at the new directory.
+10. After the complete native platform test matrix passes, repeat activation for `stable` using the production release.
 
 Do not place the offline manifest private key on the API or web server. The server only stores pre-signed envelopes. Compromise of the API database alone must not permit creation of a trusted launcher release.
 
@@ -206,9 +226,11 @@ On a Linux API host with `jq`, `base64`, and OpenSSL, an operator can independen
 jq -r .payload update.envelope.json | base64 -d > payload.json
 jq -r .signature update.envelope.json | base64 -d > signature.bin
 openssl dgst -sha256 -verify update-public-key.pem -signature signature.bin payload.json
-sha256sum SunshineAlleyLauncher.exe
-stat -c %s SunshineAlleyLauncher.exe
+sha256sum SunshineAlleyLauncher
+stat -c %s SunshineAlleyLauncher
 ```
+
+Use `SunshineAlleyLauncher.exe` for the equivalent Windows release-directory check.
 
 Compare the payload's `sha256` and `size` with the last two outputs and `server-release.json`. Remove the temporary decoded payload/signature after validation; they contain no secret but should not become alternate deployment inputs.
 

@@ -1,6 +1,6 @@
 # Windows install, signing, release, and update runbook
 
-This runbook covers the Windows-first V3 deployment. `API_DEPLOYMENT.md` defines the server contract. Linux and macOS application updating remain separate future platform implementations.
+This runbook covers the Windows V3 deployment. `API_DEPLOYMENT.md` defines the shared server contract. Linux installation/updating is documented separately in `LINUX_RELEASE.md`; macOS application updating remains future work.
 
 ## 1. Final Windows layout
 
@@ -81,6 +81,7 @@ Production example:
   -ReleaseId 42 `
   -Channel stable `
   -MinimumVersion 3.0.0 `
+  -MinimumSupportedVersion 3.0.0 `
   -PackageBaseUrl https://sunshinealley.games/launcher/releases `
   -PublisherSubject "YOUR CERTIFICATE SUBJECT TEXT" `
   -CodeSigningCertificateThumbprint "YOUR_CERTIFICATE_THUMBPRINT"
@@ -97,11 +98,13 @@ Development example:
   -DevelopmentUnsigned
 ```
 
+`MinimumVersion` is the oldest bridge/source build allowed to consume this package. `MinimumSupportedVersion` is the separately signed product-policy boundary below which Play is disabled. Omit the latter to preserve the previous optional-update policy for installations that have never received a boundary. Clients remember the highest signed boundary per channel/RID, so publishing null or a lower value does not revoke one already seen. Do not raise it without a tested update/bridge path for every affected installed build.
+
 For a complete unsigned update simulation, build the older installed test version and the newer offered version with the same manifest key and `-DevelopmentUnsigned`, using increasing versions and release IDs. Never reuse those artifacts for `stable`.
 
 The script refuses to overwrite an existing version/RID release directory and refuses a development-unsigned `stable` build. It performs, in order:
 
-1. verifies that the embedded public key and private manifest key exist;
+1. verifies that the embedded public key/private manifest key exist and match;
 2. restores the solution;
 3. runs smoke tests;
 4. publishes self-contained single-file `win-x64` with the requested version;
@@ -287,7 +290,7 @@ Update-helper failures are written beneath `%LOCALAPPDATA%\Sunshine Alley\Data\l
 - Retain the legacy endpoint, bridge EXE, TLS compatibility, and URL for longer than the longest expected dormant-player period. Test that path periodically from a frozen V2 VM.
 - Code-signing certificate renewal and manifest-key rotation are independent events. Preserve the Authenticode publisher identity where possible, and use an overlap release before changing embedded manifest trust.
 - Publish symbols/source maps only to private diagnostics storage. Public release storage needs only the EXE and API deployment metadata/envelopes.
-- Windows x64 is the supported updater target in this phase. Do not label Windows ARM64, Linux, or macOS updating as supported until their helper/package semantics have their own test matrix.
+- This runbook's updater target is Windows x64. Linux x64 has its separate native helper and acceptance matrix in `LINUX_RELEASE.md`; do not infer Windows ARM64, Linux ARM64, or macOS support from either implementation.
 
 For local GUI development without installing the current build, use the explicit bypass:
 

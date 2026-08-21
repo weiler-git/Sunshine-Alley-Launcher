@@ -16,10 +16,11 @@ public sealed partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            if (OperatingSystem.IsWindows())
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
             {
-                var installation = new WindowsInstallationService(
-                    PlatformPaths.CreateDefault());
+                ILauncherInstallationService installation =
+                    LauncherInstallationServiceFactory.Create(
+                        PlatformPaths.CreateDefault());
                 InstallationInspection inspection = installation.Inspect();
                 SetupIntent? forcedIntent = LauncherStartup.Current.SetupIntent;
                 if (forcedIntent.HasValue

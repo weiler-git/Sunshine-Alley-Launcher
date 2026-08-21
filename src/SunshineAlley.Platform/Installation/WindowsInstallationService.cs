@@ -8,7 +8,7 @@ using SunshineAlley.Platform.Storage;
 
 namespace SunshineAlley.Platform.Installation;
 
-public sealed class WindowsInstallationService
+public sealed class WindowsInstallationService : ILauncherInstallationService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private static readonly string[] MigratedDataDirectories =
@@ -24,6 +24,13 @@ public sealed class WindowsInstallationService
         _paths = paths ?? PlatformPaths.CreateDefault();
 
     public PlatformPaths Paths => _paths;
+
+    public bool CanChooseApplicationDirectory => true;
+
+    public bool ShowsWindowsShortcutOptions => true;
+
+    public string UninstallDescription =>
+        "The application, shortcuts, update cache, and Windows installation registration will be removed. Device identity credentials are preserved.";
 
     public string DefaultExecutablePath => Path.Combine(
         _paths.ApplicationDirectory,

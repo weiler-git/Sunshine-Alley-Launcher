@@ -11,7 +11,9 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        int? updateResult = WindowsUpdateHelper.TryRunAsync(args)
+        int? updateResult = (OperatingSystem.IsLinux()
+                ? LinuxUpdateHelper.TryRunAsync(args)
+                : WindowsUpdateHelper.TryRunAsync(args))
             .GetAwaiter()
             .GetResult();
         if (updateResult.HasValue)
@@ -20,7 +22,9 @@ internal static class Program
             return;
         }
 
-        int? maintenanceResult = WindowsMaintenanceHelper.TryRunAsync(args)
+        int? maintenanceResult = (OperatingSystem.IsLinux()
+                ? LinuxMaintenanceHelper.TryRunAsync(args)
+                : WindowsMaintenanceHelper.TryRunAsync(args))
             .GetAwaiter()
             .GetResult();
         if (maintenanceResult.HasValue)

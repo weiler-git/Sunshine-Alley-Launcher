@@ -1,15 +1,15 @@
 # Sunshine Alley Launcher — cross-platform deployment
 
-The base V3 migration replaces the .NET 7 Windows Forms launcher with a .NET 10 / Avalonia 12 application. This incremental patch adds the Windows guided installer/migrator, repair/uninstall flow, and signed V3 application updater while retaining the existing cross-platform architecture and command-line launch harness.
+The base V3 migration replaces the .NET 7 Windows Forms launcher with a .NET 10 / Avalonia 12 application. The current branch includes the Windows guided installer/migrator and signed updater plus the native Linux XDG installer, repair/uninstall lifecycle, desktop integration, and signed self-updater, while retaining the cross-platform game/mod architecture and command-line launch harness.
 
 ## 0. Apply the patch
 
-The supplied Git patch targets the current V3 source archive that already contains the earlier migration patches. Start from that same current branch with no overlapping local edits, extract the patch ZIP outside the repository, and run:
+The supplied Linux-behaviour Git patch targets the current V3 source archive that already contains the Windows lifecycle and cross-platform launcher. Start from that same revision with no overlapping local edits, extract the patch ZIP outside the repository, and run:
 
 ```bash
-git switch -c v3-windows-installer-updater
-git apply --check /path/to/SunshineAlley-V3-Windows-Installer-Updater.patch
-git apply --index --binary /path/to/SunshineAlley-V3-Windows-Installer-Updater.patch
+git switch feature-linux-behaviour
+git apply --check /path/to/Sunshine-Alley-Launcher-Linux-Behaviour.patch
+git apply --index --binary /path/to/Sunshine-Alley-Launcher-Linux-Behaviour.patch
 git status --short
 ```
 
@@ -23,9 +23,9 @@ Review the staged changes, build/test them, then commit normally. Generated `bin
 | `SunshineAlley.Platform` | JSON settings, legacy registry migration, OS device identity, OS secret stores, Steam discovery, native BepInEx/Doorstop launch strategies, process monitoring, and shell integration. |
 | `SunshineAlley.App` | The Avalonia desktop GUI: launcher, settings, and optional-mod windows. |
 | `SunshineAlley.Cli` | A GUI-independent diagnostic, verify, and launch harness. Use this first on every target OS. |
-| `SunshineAlley.SmokeTests` | Dependency-free executable smoke tests for device GUID derivation, settings, path containment, hashing, and legacy RSA XML conversion. |
+| `SunshineAlley.SmokeTests` | Dependency-free executable smoke tests for shared primitives plus XDG resolution, Linux installation detection, desktop entries, path persistence, mandatory-update policy, replacement, rollback, and executable modes. |
 
-The old Windows Forms project, external COM shortcut-library dependency, embedded signing PFX reference, and unsafe in-process updater are removed. Windows now has a guided per-user installer/migrator and a signed-manifest updater that runs the same launcher from a temporary helper copy. Linux/macOS package update implementations remain future platform work. Non-secret values in the legacy Windows registry key are retained during migration; the migrated private RSA value is deleted from the registry after Credential Manager accepts it.
+The old Windows Forms project, external COM shortcut-library dependency, embedded signing PFX reference, and unsafe in-process updater are removed. Windows has a guided per-user installer/migrator and Authenticode-plus-signed-manifest updater. Linux now has a native XDG per-user installer, freedesktop application-menu integration, repair/uninstall helpers, and a signed-manifest self-updater with atomic replacement and rollback. macOS application updating remains future platform work. Non-secret values in the legacy Windows registry key are retained during migration; the migrated private RSA value is deleted from the registry after Credential Manager accepts it.
 
 ## 2. Toolchain and NuGet requirements
 
@@ -68,7 +68,7 @@ Run the GUI on the current development OS:
 dotnet run --project src/SunshineAlley.App/SunshineAlley.App.csproj -- --portable
 ```
 
-The included GitHub Actions workflow builds all four target RIDs on Windows 2025, Ubuntu 24.04, macOS 15 Intel, and macOS 15 Apple Silicon runners. `scripts/publish-all.sh` and `scripts/publish-all.ps1` perform a local restore, smoke test, publish, and basic archive packaging.
+The included GitHub Actions workflow builds all four target RIDs on Windows 2025, Ubuntu 24.04, macOS 15 Intel, and macOS 15 Apple Silicon runners. `scripts/publish-all.sh` and `scripts/publish-all.ps1` perform a local restore, smoke test, and publish; Windows/macOS are archived while Linux is emitted as the directly downloadable raw executable.
 
 ```bash
 ./scripts/publish-all.sh
@@ -116,10 +116,10 @@ Settings move from the registry into an atomic JSON file:
 | OS | Settings directory |
 | --- | --- |
 | Windows | `%LOCALAPPDATA%\Sunshine Alley\Config` |
-| Linux | `${XDG_CONFIG_HOME:-~/.config}/sunshine-alley/launcher` |
+| Linux | `${XDG_CONFIG_HOME:-$HOME/.config}/sunshine-alley/launcher` |
 | macOS | `~/Library/Application Support/Sunshine Alley/Launcher` |
 
-On Windows, downloaded modpack data defaults to `%LOCALAPPDATA%\Sunshine Alley\Data` and the application defaults to `%LOCALAPPDATA%\Sunshine Alley\App`. They are separate sibling directories; the data directory can be changed during setup or later in Settings. Linux/macOS retain their corresponding per-user data defaults.
+On Windows, downloaded modpack data defaults to `%LOCALAPPDATA%\Sunshine Alley\Data` and the application defaults to `%LOCALAPPDATA%\Sunshine Alley\App`. They are separate sibling directories; the data directory can be changed during setup or later in Settings. On Linux the fixed application directory is `${XDG_DATA_HOME:-$HOME/.local/share}/sunshine-alley/launcher`, while default managed mod data is the separate `.../sunshine-alley/data` directory and remains user-selectable. Relative XDG values are ignored as required by the XDG base-directory rules.
 
 On the first Windows run:
 
@@ -288,7 +288,9 @@ Production Windows update releases require both Authenticode and an offline-sign
 
 ### Linux release
 
-The script produces a `tar.gz` and includes a `.desktop` template. A DEB/RPM/AppImage pipeline should install the executable under `/opt/sunshine-alley`, the desktop entry under `/usr/share/applications`, and an icon under the normal hicolor icon tree. Declare at least the Avalonia libraries listed above and `libsecret-tools` as dependencies.
+The Linux release is a raw, self-contained `SunshineAlleyLauncher` executable. On first execution it installs itself under the current user's resolved XDG data directory, writes a user-level application-menu entry/icon, and thereafter updates itself through the signed V3 manifest flow. It never installs under `/opt` or `/usr` and does not require a DEB/RPM/AppImage, root, or `sudo`.
+
+Use `scripts/linux/Publish-LinuxUpdate.ps1` to create the immutable `linux-x64` executable, update/no-update envelopes, and server record. See [LINUX_RELEASE.md](LINUX_RELEASE.md) for the exact layout, first-run/repair/uninstall behavior, update transaction and rollback design, mandatory-version API field, release commands, server activation requirements, and clean-machine acceptance matrix.
 
 ### macOS release, signing, and notarization
 
@@ -315,9 +317,11 @@ Do not copy Apple certificates, passwords, API keys, or notarization profiles in
 
 ## 10. Update policy
 
-Windows V3 calls only the new `LauncherGetUpdateV3` operation. It verifies an offline-signed manifest, release ID, newer version, RID/channel, approved HTTPS host, signed size/SHA-256, and Authenticode publisher. It stages on the application volume, launches a temporary copy of itself, exits, replaces the installed EXE, and retains the previous EXE until the replacement confirms successful runtime initialization. An early failure automatically rolls back and blocks that release ID until a higher release is published.
+Installed Windows and Linux V3 launchers call only the new `LauncherGetUpdateV3` operation. Both verify an offline-signed manifest, release ID, newer version, RID/channel, approved HTTPS host, and signed size/SHA-256. Windows additionally requires the configured Authenticode publisher. Windows stages on the application volume; Linux stages under XDG cache and copies the verified candidate beside the installed executable before the final atomic rename. Both retain a verified previous executable until replacement startup confirms. An early failure automatically rolls back and blocks that release ID until a higher release is published.
 
-The legacy `LauncherCheckUpdate` operation remains unchanged for V2 clients and must continue serving a raw immutable V3 bridge EXE for delayed users. It must never return a V3 envelope or non-Windows artifact. Linux and macOS do not use the Windows replacement implementation; their eventual update-installer implementations must respect native package/bundle signing and installation semantics.
+The optional signed `minimumSupportedVersion` is the launch-policy boundary; Play is disabled below it even when a later update step fails or startup is offline. The highest signed boundary seen per channel/RID is retained and cannot be lowered by a replay/null policy. It is distinct from `minimumVersion`, the oldest source/bridge launcher able to consume a package. The API must provide signed bridge releases when raising package compatibility above deployed clients.
+
+The legacy `LauncherCheckUpdate` operation remains unchanged for V2 clients and must continue serving a raw immutable V3 bridge EXE for delayed users. It must never return a V3 envelope or non-Windows artifact. macOS does not use either native replacement implementation yet.
 
 ## 11. Operational notes
 

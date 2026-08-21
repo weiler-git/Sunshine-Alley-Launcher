@@ -299,6 +299,9 @@ public sealed class LauncherUpdateManifest
     [JsonPropertyName("minimumVersion")]
     public string? MinimumVersion { get; init; }
 
+    [JsonPropertyName("minimumSupportedVersion")]
+    public string? MinimumSupportedVersion { get; init; }
+
     [JsonPropertyName("publishedUtc")]
     public DateTimeOffset PublishedUtc { get; init; }
 
@@ -322,7 +325,8 @@ public sealed record LauncherUpdateCheckResult(
     bool UpdateAvailable,
     bool HelperStarted,
     string Message,
-    string? Version = null);
+    string? Version = null,
+    bool IsMandatoryUpdate = false);
 
 public class LauncherException : Exception
 {
