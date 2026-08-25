@@ -14,7 +14,9 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     private string _notice = string.Empty;
     private string _gameDirectory = string.Empty;
     private string _modDataDirectory = string.Empty;
+     private string _launcherVersionNote = string.Empty;
     private string _deviceIdentityNote = string.Empty;
+   
     private bool _useSteam = true;
     private bool _persistent;
     private bool _isBusy = true;
@@ -103,6 +105,11 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     public string DefaultModDataDirectory =>
         _runtime?.Paths.DataDirectory ?? ModDataDirectory;
 
+    public string LauncherVersionNote
+    {
+        get => _launcherVersionNote;
+        private set => SetField(ref _launcherVersionNote, value);
+    }
     public string DeviceIdentityNote
     {
         get => _deviceIdentityNote;
@@ -196,6 +203,14 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             _persistent = _preferences.Persistent;
             OnPropertyChanged(nameof(UseSteam));
             OnPropertyChanged(nameof(Persistent));
+
+            string version = typeof(App).Assembly
+            .GetName()
+            .Version?
+            .ToString(3)
+            ?? "unknown (3.0.0 or later)";
+
+            LauncherVersionNote = $"Launcher version: {version}";
 
             DeviceIdentity identity = _runtime.DeviceIdentity;
             DeviceIdentityNote = identity.IsFallback

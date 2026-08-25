@@ -14,6 +14,11 @@ internal static class Program
             return 0;
         }
 
+        if (args[0].ToLowerInvariant() is "launcher-version" or "lversion")
+        {
+            return PrintLauncherVersion();
+        }
+
         try
         {
             await using LauncherRuntime runtime = await LauncherRuntime.CreateAsync();
@@ -170,6 +175,18 @@ internal static class Program
         return result.NormalizedPath;
     }
 
+    private static int PrintLauncherVersion()
+    {
+        string version = typeof(Program).Assembly
+            .GetName()
+            .Version?
+            .ToString(3)
+            ?? "unknown (3.0.0 or later)";
+
+        Console.WriteLine(version);
+        return 0;
+    }
+
     private static int PrintDeviceId(LauncherRuntime runtime)
     {
         Console.WriteLine(runtime.DeviceIdentity.Value);
@@ -215,6 +232,7 @@ internal static class Program
     {
         Console.WriteLine("Sunshine Alley cross-platform launch harness");
         Console.WriteLine();
+        Console.WriteLine("  launcher-version/lversion");
         Console.WriteLine("  doctor [--modpack ID] [--game PATH] [--data PATH] [--no-steam] [--persistent]");
         Console.WriteLine("  servers");
         Console.WriteLine("  verify --modpack ID [--data PATH]");

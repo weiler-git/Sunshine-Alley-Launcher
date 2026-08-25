@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>sunshine-alley-cli</AssemblyName>
+    <Version>$(SunshineAlleyLauncherVersion)</Version>
     <Description>Cross-platform diagnostic, verification, and Valheim launch harness.</Description>
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
   </PropertyGroup>

@@ -170,6 +170,7 @@ Published invocation:
 | Command | Purpose |
 | --- | --- |
 | `help`, `--help`, `-h` | Prints top-level help |
+| `launcher-version`, `lversion` | Prints the launcher version |
 | `doctor` | Diagnoses Steam, Valheim, BepInEx, Doorstop, and launch readiness |
 | `servers` | Fetches and prints available server profiles |
 | `verify` | Synchronizes and verifies a positive modpack ID |
@@ -191,6 +192,25 @@ sunshine-alley-cli launch --help
 ```
 
 The current parser silently ignores `--help` there and may proceed with the default vanilla launch.
+
+## `launcher-version`
+
+```bash
+dotnet run --project src/SunshineAlley.Cli -- launcher-version
+dotnet run --project src/SunshineAlley.Cli -- lversion
+```
+
+Prints the launcher version, for example:
+
+```text
+3.0.0
+```
+
+If unavailable:
+
+```text
+unknown (3.0.0 or later)
+```
 
 ## `doctor`
 
