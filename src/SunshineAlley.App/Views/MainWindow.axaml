@@ -11,6 +11,45 @@
     MinHeight="590"
     Icon="/Assets/SA.ico"
     WindowStartupLocation="CenterScreen">
+  <Window.Styles>
+    <Style Selector="Button.notice-copy">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Foreground" Value="#FFD7D3" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.notice-copy:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="#FFD7D3" />
+    </Style>
+    <Style Selector="Button.notice-copy:pressed">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="#FFD7D3" />
+    </Style>
+    <Style Selector="Button.notice-copy TextBlock.notice-copy-glyph">
+      <Setter Property="Padding" Value="0,1,4,0" />
+      <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+      <Setter Property="RenderTransform" Value="rotate(0deg)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition
+              Property="RenderTransform"
+              Duration="0:0:0.12" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.notice-copy:pointerover TextBlock.notice-copy-glyph">
+      <Setter Property="RenderTransform" Value="rotate(12deg)" />
+    </Style>
+  </Window.Styles>
+
   <Grid>
     <Image
         Source="/Assets/vikingship.png"
@@ -106,7 +145,51 @@
                 Padding="12"
                 Margin="0,0,0,12"
                 IsVisible="{Binding HasNotice}">
-              <TextBlock Text="{Binding Notice}" TextWrapping="Wrap" Foreground="#FFD7D3" />
+              <ItemsControl ItemsSource="{Binding NoticeItems}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Spacing="8" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:NoticeItemViewModel">
+                    <StackPanel>
+                      <Button
+                          Classes="notice-copy"
+                          HorizontalAlignment="Stretch"
+                          IsVisible="{Binding IsRegular}"
+                          Click="NoticeCopy_Click">
+                        <TextBlock TextWrapping="Wrap">
+                          <Run Text="{Binding DisplayText}" />
+                          <Run Text=" " />
+                          <InlineUIContainer BaselineAlignment="Baseline">
+                            <TextBlock Classes="notice-copy-glyph" Text="📋" />
+                          </InlineUIContainer>
+                        </TextBlock>
+                      </Button>
+                      <StackPanel
+                          Spacing="5"
+                          IsVisible="{Binding IsSteamLaunchOption}">
+                        <TextBlock
+                            Text="{Binding DisplayText}"
+                            TextWrapping="Wrap"
+                            Foreground="#FFD7D3" />
+                        <Button
+                            Classes="notice-copy"
+                            HorizontalAlignment="Left"
+                            Click="NoticeCopy_Click">
+                          <TextBlock>
+                            <Run Text="Copy launch option " />
+                            <InlineUIContainer BaselineAlignment="Baseline">
+                              <TextBlock Classes="notice-copy-glyph" Text="📋" />
+                            </InlineUIContainer>
+                          </TextBlock>
+                        </Button>
+                      </StackPanel>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </Border>
             <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
             <ProgressBar

@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using SunshineAlley.App.ViewModels;
 
@@ -54,6 +55,23 @@ public sealed partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             await viewModel.OpenModDataDirectoryAsync();
+        }
+    }
+
+    private async void NoticeCopy_Click(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (sender is Control { DataContext: NoticeItemViewModel noticeItem })
+        {
+            await CopyTextToClipboardAsync(noticeItem.CopyText);
+        }
+    }
+
+    private async Task CopyTextToClipboardAsync(string text)
+    {
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard is not null)
+        {
+            await clipboard.SetTextAsync(text);
         }
     }
 }
