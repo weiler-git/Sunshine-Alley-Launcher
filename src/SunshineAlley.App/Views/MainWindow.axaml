@@ -22,6 +22,7 @@
       <Setter Property="Foreground" Value="#FFD7D3" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
     </Style>
     <Style Selector="Button.notice-copy:pointerover">
       <Setter Property="Background" Value="Transparent" />
@@ -37,6 +38,7 @@
       <Setter Property="Padding" Value="0,1,4,0" />
       <Setter Property="RenderTransformOrigin" Value="50%,50%" />
       <Setter Property="RenderTransform" Value="rotate(0deg)" />
+      <Setter Property="Opacity" Value="0.7" />
       <Setter Property="Transitions">
         <Transitions>
           <TransformOperationsTransition
@@ -47,6 +49,7 @@
     </Style>
     <Style Selector="Button.notice-copy:pointerover TextBlock.notice-copy-glyph">
       <Setter Property="RenderTransform" Value="rotate(12deg)" />
+      <Setter Property="Opacity" Value="1" />
     </Style>
   </Window.Styles>
 
@@ -158,6 +161,7 @@
                           Classes="notice-copy"
                           HorizontalAlignment="Stretch"
                           IsVisible="{Binding IsRegular}"
+                          ToolTip.Tip="Copy error to clipboard"
                           Click="NoticeCopy_Click">
                         <TextBlock TextWrapping="Wrap">
                           <Run Text="{Binding DisplayText}" />
@@ -177,6 +181,7 @@
                         <Button
                             Classes="notice-copy"
                             HorizontalAlignment="Left"
+                            ToolTip.Tip="Copy launch option to clipboard"
                             Click="NoticeCopy_Click">
                           <TextBlock>
                             <Run Text="Copy launch option " />
@@ -217,5 +222,31 @@
             Command="{Binding PlayCommand}" />
       </Grid>
     </Grid>
+
+    <Popup
+        x:Name="CopyToast"
+        Placement="TopEdgeAlignedLeft"
+        VerticalOffset="-6">
+      <Border
+          x:Name="CopyToastBorder"
+          Background="#E6222B2E"
+          CornerRadius="6"
+          Padding="8,4"
+          Opacity="1"
+          IsHitTestVisible="False">
+        <Border.Transitions>
+          <Transitions>
+            <DoubleTransition
+                Property="Opacity"
+                Duration="0:0:0.2" />
+          </Transitions>
+        </Border.Transitions>
+        <TextBlock
+            Text="Copied!"
+            FontSize="12"
+            FontWeight="SemiBold"
+            Foreground="#FFF4E6" />
+      </Border>
+    </Popup>
   </Grid>
 </Window>
