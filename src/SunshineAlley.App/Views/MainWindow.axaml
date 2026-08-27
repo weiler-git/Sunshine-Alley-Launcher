@@ -11,6 +11,48 @@
     MinHeight="590"
     Icon="/Assets/SA.ico"
     WindowStartupLocation="CenterScreen">
+  <Window.Styles>
+    <Style Selector="Button.notice-copy">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Foreground" Value="#FFD7D3" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.notice-copy:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="#FFD7D3" />
+    </Style>
+    <Style Selector="Button.notice-copy:pressed">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="#FFD7D3" />
+    </Style>
+    <Style Selector="Button.notice-copy TextBlock.notice-copy-glyph">
+      <Setter Property="Padding" Value="0,1,4,0" />
+      <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+      <Setter Property="RenderTransform" Value="rotate(0deg)" />
+      <Setter Property="Opacity" Value="0.7" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition
+              Property="RenderTransform"
+              Duration="0:0:0.12" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.notice-copy:pointerover TextBlock.notice-copy-glyph">
+      <Setter Property="RenderTransform" Value="rotate(12deg)" />
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </Window.Styles>
+
   <Grid>
     <Image
         Source="/Assets/vikingship.png"
@@ -99,23 +141,87 @@
                 Command="{Binding RefreshCommand}" />
           </Grid>
 
-          <StackPanel Grid.Row="5" VerticalAlignment="Bottom">
+          <Grid Grid.Row="5" RowDefinitions="*,Auto,Auto">
             <Border
+                Grid.Row="0"
+                VerticalAlignment="Bottom"
                 Background="#D0442527"
                 CornerRadius="6"
-                Padding="12"
+                Padding="12,12,0,12"
                 Margin="0,0,0,12"
                 IsVisible="{Binding HasNotice}">
-              <TextBlock Text="{Binding Notice}" TextWrapping="Wrap" Foreground="#FFD7D3" />
+              <ScrollViewer
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl
+                    Margin="0,0,12,0"
+                    ItemsSource="{Binding NoticeItems}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:NoticeItemViewModel">
+                      <StackPanel>
+                        <Border
+                            Height="1"
+                            Margin="0,2"
+                            Background="#FFD7D3"
+                            Opacity="0.20"
+                            IsVisible="{Binding ShowSeparatorBefore}" />
+                        <Button
+                            Classes="notice-copy"
+                            HorizontalAlignment="Stretch"
+                            IsVisible="{Binding IsRegular}"
+                            ToolTip.Tip="Copy error to clipboard"
+                            Click="NoticeCopy_Click">
+                          <TextBlock TextWrapping="Wrap">
+                            <Run Text="{Binding DisplayText}" />
+                            <Run Text=" " />
+                            <InlineUIContainer BaselineAlignment="Baseline">
+                              <TextBlock Classes="notice-copy-glyph" Text="📋" />
+                            </InlineUIContainer>
+                          </TextBlock>
+                        </Button>
+                        <StackPanel
+                            Spacing="5"
+                            IsVisible="{Binding IsSteamLaunchOption}">
+                          <TextBlock
+                              Text="{Binding DisplayText}"
+                              TextWrapping="Wrap"
+                              Foreground="#FFD7D3" />
+                          <Button
+                              Classes="notice-copy"
+                              HorizontalAlignment="Left"
+                              ToolTip.Tip="Copy launch option to clipboard"
+                              Click="NoticeCopy_Click">
+                            <TextBlock>
+                              <Run Text="Copy launch option " />
+                              <InlineUIContainer BaselineAlignment="Baseline">
+                                <TextBlock Classes="notice-copy-glyph" Text="📋" />
+                              </InlineUIContainer>
+                            </TextBlock>
+                          </Button>
+                        </StackPanel>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
             </Border>
-            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+            <TextBlock
+                Grid.Row="1"
+                Text="{Binding Status}"
+                TextWrapping="Wrap" />
             <ProgressBar
+                Grid.Row="2"
                 Margin="0,8,0,0"
                 Minimum="0"
                 Maximum="100"
                 Value="{Binding ProgressValue}"
                 IsVisible="{Binding IsProgressVisible}" />
-          </StackPanel>
+          </Grid>
         </Grid>
       </Border>
 
@@ -134,5 +240,31 @@
             Command="{Binding PlayCommand}" />
       </Grid>
     </Grid>
+
+    <Popup
+        x:Name="CopyToast"
+        Placement="TopEdgeAlignedLeft"
+        VerticalOffset="-6">
+      <Border
+          x:Name="CopyToastBorder"
+          Background="#E6222B2E"
+          CornerRadius="6"
+          Padding="8,4"
+          Opacity="1"
+          IsHitTestVisible="False">
+        <Border.Transitions>
+          <Transitions>
+            <DoubleTransition
+                Property="Opacity"
+                Duration="0:0:0.2" />
+          </Transitions>
+        </Border.Transitions>
+        <TextBlock
+            Text="Copied!"
+            FontSize="12"
+            FontWeight="SemiBold"
+            Foreground="#FFF4E6" />
+      </Border>
+    </Popup>
   </Grid>
 </Window>

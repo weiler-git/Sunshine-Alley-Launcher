@@ -6,6 +6,9 @@ namespace SunshineAlley.App.ViewModels;
 
 public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 {
+    private const string SteamLaunchOptionMarker =
+        "Required Steam launch option: ";
+
     private readonly CancellationTokenSource _shutdown = new();
     private LauncherRuntime? _runtime;
     private LauncherPreferences? _preferences;
@@ -44,6 +47,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     public event Action? ShutdownRequested;
 
     public ObservableCollection<ServerItemViewModel> Servers { get; } = [];
+    public ObservableCollection<NoticeItemViewModel> NoticeItems { get; } = [];
     public AsyncCommand PlayCommand { get; }
     public AsyncCommand RefreshCommand { get; }
     public AsyncCommand VerifyCommand { get; }
@@ -81,12 +85,49 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         {
             if (SetField(ref _notice, value))
             {
+                RebuildNoticeItems();
                 OnPropertyChanged(nameof(HasNotice));
             }
         }
     }
 
     public bool HasNotice => !string.IsNullOrWhiteSpace(Notice);
+
+    private void RebuildNoticeItems()
+    {
+        NoticeItems.Clear();
+        if (string.IsNullOrWhiteSpace(Notice))
+        {
+            return;
+        }
+
+        foreach (string problem in Notice.Split(
+            Environment.NewLine,
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            bool showSeparatorBefore = NoticeItems.Count > 0;
+            int markerIndex = problem.IndexOf(
+                SteamLaunchOptionMarker,
+                StringComparison.Ordinal);
+            if (markerIndex < 0)
+            {
+                NoticeItems.Add(new NoticeItemViewModel(
+                    problem,
+                    problem,
+                    false,
+                    showSeparatorBefore));
+                continue;
+            }
+
+            string displayText = problem[..markerIndex].Trim();
+            string copyText = problem[(markerIndex + SteamLaunchOptionMarker.Length)..].Trim();
+            NoticeItems.Add(new NoticeItemViewModel(
+                displayText,
+                copyText,
+                true,
+                showSeparatorBefore));
+        }
+    }
 
     public string GameDirectory
     {
@@ -736,6 +777,27 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 
         _shutdown.Dispose();
     }
+}
+
+public sealed class NoticeItemViewModel
+{
+    public NoticeItemViewModel(
+        string displayText,
+        string copyText,
+        bool isSteamLaunchOption,
+        bool showSeparatorBefore)
+    {
+        DisplayText = displayText;
+        CopyText = copyText;
+        IsSteamLaunchOption = isSteamLaunchOption;
+        ShowSeparatorBefore = showSeparatorBefore;
+    }
+
+    public string DisplayText { get; }
+    public string CopyText { get; }
+    public bool IsSteamLaunchOption { get; }
+    public bool ShowSeparatorBefore { get; }
+    public bool IsRegular => !IsSteamLaunchOption;
 }
 
 public sealed class ServerItemViewModel

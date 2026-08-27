@@ -53,9 +53,16 @@ internal sealed class UnixBepInExLaunchStrategy : IGameLaunchStrategy
                 if (!await _steamService.HasLaunchOptionAsync(WrapperName, cancellationToken))
                 {
                     requiredLaunchOption = _steamService.GetRequiredLaunchOption(script);
+                    string operatingSystem = OperatingSystem.IsLinux()
+                        ? "Linux"
+                        : OperatingSystem.IsMacOS()
+                            ? "macOS"
+                            : "this operating system";
                     problems.Add(
-                        "Steam must be configured once to invoke Sunshine Alley's Unix launch wrapper. "
-                        + $"Set Valheim's Steam launch option to: {requiredLaunchOption}");
+                        $"Sunshine Alley needs a one-time setup on {operatingSystem}. "
+                        + "Copy the launch option below, then in Steam right-click Valheim → Properties → General "
+                        + "and paste it into Launch Options. "
+                        + $"Required Steam launch option: {requiredLaunchOption}");
                 }
             }
         }
