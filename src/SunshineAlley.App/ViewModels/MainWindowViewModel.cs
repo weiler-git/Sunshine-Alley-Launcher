@@ -105,18 +105,27 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             Environment.NewLine,
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
+            bool showSeparatorBefore = NoticeItems.Count > 0;
             int markerIndex = problem.IndexOf(
                 SteamLaunchOptionMarker,
                 StringComparison.Ordinal);
             if (markerIndex < 0)
             {
-                NoticeItems.Add(new NoticeItemViewModel(problem, problem, false));
+                NoticeItems.Add(new NoticeItemViewModel(
+                    problem,
+                    problem,
+                    false,
+                    showSeparatorBefore));
                 continue;
             }
 
             string displayText = problem[..markerIndex].Trim();
             string copyText = problem[(markerIndex + SteamLaunchOptionMarker.Length)..].Trim();
-            NoticeItems.Add(new NoticeItemViewModel(displayText, copyText, true));
+            NoticeItems.Add(new NoticeItemViewModel(
+                displayText,
+                copyText,
+                true,
+                showSeparatorBefore));
         }
     }
 
@@ -775,16 +784,19 @@ public sealed class NoticeItemViewModel
     public NoticeItemViewModel(
         string displayText,
         string copyText,
-        bool isSteamLaunchOption)
+        bool isSteamLaunchOption,
+        bool showSeparatorBefore)
     {
         DisplayText = displayText;
         CopyText = copyText;
         IsSteamLaunchOption = isSteamLaunchOption;
+        ShowSeparatorBefore = showSeparatorBefore;
     }
 
     public string DisplayText { get; }
     public string CopyText { get; }
     public bool IsSteamLaunchOption { get; }
+    public bool ShowSeparatorBefore { get; }
     public bool IsRegular => !IsSteamLaunchOption;
 }
 
