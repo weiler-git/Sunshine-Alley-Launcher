@@ -120,12 +120,20 @@
       </Border>
 
       <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,20,0,0">
-        <TextBlock
+        <StackPanel
             VerticalAlignment="Center"
-            Text="{Binding DeviceIdentityNote}"
-            Classes="muted"
-            FontSize="11"
-            TextWrapping="Wrap" />
+            Spacing="2">
+          <TextBlock
+              Text="{Binding LauncherVersionNote}"
+              Classes="muted"
+              FontSize="11" />
+          <TextBlock
+              Text="{Binding DeviceIdentityNote}"
+              Classes="muted"
+              FontSize="11"
+              TextWrapping="Wrap" />
+        </StackPanel>
+
         <Button
             Grid.Column="1"
             Classes="primary"

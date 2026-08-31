@@ -1,5 +1,9 @@
 <Project>
   <PropertyGroup>
+    <SunshineAlleyLauncherVersion>3.0.0</SunshineAlleyLauncherVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
