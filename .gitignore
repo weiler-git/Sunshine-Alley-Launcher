@@ -35,3 +35,6 @@ ModPacks/
 *.pkg
 *.AppImage
 *.tar.gz
+
+# Local GitHub CLI configuration
+.gh-local/
