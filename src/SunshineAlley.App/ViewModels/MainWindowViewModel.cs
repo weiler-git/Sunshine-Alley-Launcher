@@ -158,9 +158,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     public bool CanPlay =>
         !IsBusy
         && !_launcherUpdateRequired
-        && SelectedServer is not null
-        && (SelectedServer.ModPackId <= 0
-            || (_runtime?.ModPacks.GetState(SelectedServer.ModPackId).IsVerified ?? false));
+        && SelectedServer is not null;
 
     public bool CanOpenModPack => !IsBusy && SelectedServer?.ModPackId > 0;
 
@@ -628,7 +626,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 
     private async Task PlayCoreAsync()
     {
-        if (_runtime is null || SelectedServer is null)
+        if (_runtime is null || SelectedServer is not { } selected)
         {
             return;
         }
@@ -639,19 +637,24 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
                 "This launcher version has been declared unsupported by a signed release policy. Complete the required launcher update before starting Valheim.");
         }
 
-        if (SelectedServer.ModPackId > 0)
+        GameServer currentServer = selected.Server;
+        if (!currentServer.IsLocalOption)
         {
-            
+            IReadOnlyList<GameServer> currentServers = await _runtime.Servers.RefreshAsync(_shutdown.Token);
+            currentServer = currentServers.FirstOrDefault(server =>
+                    server.WorldName == selected.WorldName && server.ModPackId == selected.ModPackId)
+                ?? throw new LauncherException("The selected server is no longer available. Refresh the server list and select a server.");
         }
-
-        IReadOnlyList<GameServer> currentServers = await _runtime.Servers.RefreshAsync(_shutdown.Token);
-        var currentServer = currentServers.FirstOrDefault(server =>
-                server.WorldName == SelectedServer.WorldName && server.ModPackId == SelectedServer.ModPackId)
-            ?? throw new LauncherException("The selected server is no longer available. Refresh the server list and select a server.");
 
         SteamInstallation? steam = await _runtime.Steam.RefreshAsync(_shutdown.Token);
         if (!SteamBuildCompatibility.IsCompatible(steam?.BuildId, currentServer.SteamBuildId))
         {
+            if (steam?.BuildId is int localBuildId && localBuildId > currentServer.SteamBuildId)
+            {
+                throw new LauncherException(
+                    $"Valheim build {localBuildId} is newer than server build {currentServer.SteamBuildId}. In Steam, switch Valheim to the 'default_old' beta branch to downgrade.");
+            }
+
             throw new LauncherException(
                 $"Valheim build {steam?.BuildId} does not match server build {currentServer.SteamBuildId}. Update the game in Steam first.");
         }
