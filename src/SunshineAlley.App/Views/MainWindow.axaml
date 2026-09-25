@@ -58,15 +58,25 @@
           <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
             <StackPanel>
               <TextBlock Text="Game directory" FontSize="13" Classes="muted" />
-              <TextBlock
-                  Text="{Binding GameDirectory}"
-                  TextTrimming="CharacterEllipsis"
-                  ToolTip.Tip="{Binding GameDirectory}" />
+              <Button
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Left"
+                  Background="Transparent"
+                  Foreground="#E8A93A"
+                  Padding="0"
+                  Cursor="Hand"
+                  ToolTip.Tip="{Binding GameDirectory}"
+                  Click="OpenGameDirectory_Click">
+                <TextBlock
+                    Text="{Binding GameDirectory}"
+                    TextTrimming="CharacterEllipsis" />
+              </Button>
             </StackPanel>
             <Button
                 Grid.Column="1"
                 Classes="secondary"
-                Content="Open data"
+                Content="Open Modpack"
+                IsEnabled="{Binding CanOpenModPack}"
                 Click="OpenData_Click" />
           </Grid>
 
@@ -120,17 +130,11 @@
       </Border>
 
       <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,20,0,0">
-        <TextBlock
-            VerticalAlignment="Center"
-            Text="{Binding DeviceIdentityNote}"
-            Classes="muted"
-            FontSize="11"
-            TextWrapping="Wrap" />
         <Button
             Grid.Column="1"
             Classes="primary"
             MinWidth="150"
-            Content="PLAY"
+            Content="{Binding PlayButtonText}"
             Command="{Binding PlayCommand}" />
       </Grid>
     </Grid>

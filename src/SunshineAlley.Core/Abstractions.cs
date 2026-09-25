@@ -42,6 +42,7 @@ public interface ILegacyMigrationService
 public interface ISteamService
 {
     Task<SteamInstallation?> DiscoverAsync(CancellationToken cancellationToken = default);
+    Task<SteamInstallation?> RefreshAsync(CancellationToken cancellationToken = default);
     Task<bool> IsRunningAsync(CancellationToken cancellationToken = default);
     Task EnsureRunningAsync(CancellationToken cancellationToken = default);
     Task LaunchAppAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default);

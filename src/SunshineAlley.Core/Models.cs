@@ -47,6 +47,10 @@ public sealed class ModPackState
 
     public int Id { get; }
     public bool IsVerified { get; private set; }
+    public DateTimeOffset? VerifiedAtUtc { get; private set; }
+    public bool IsRecentlyVerified => IsVerified
+        && VerifiedAtUtc is { } verifiedAt
+        && DateTimeOffset.UtcNow - verifiedAt < TimeSpan.FromMinutes(5);
 
     public IReadOnlyList<OptionalModState> OptionalMods
     {
@@ -65,6 +69,7 @@ public sealed class ModPackState
         lock (_gate)
         {
             IsVerified = value;
+            VerifiedAtUtc = value ? DateTimeOffset.UtcNow : null;
         }
     }
 
@@ -91,6 +96,7 @@ public sealed class ModPackState
 
             _optionalMods[name] = existing with { Enabled = enabled };
             IsVerified = false;
+            VerifiedAtUtc = null;
             return true;
         }
     }

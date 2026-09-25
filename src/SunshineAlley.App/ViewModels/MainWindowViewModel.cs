@@ -14,7 +14,6 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     private string _notice = string.Empty;
     private string _gameDirectory = string.Empty;
     private string _modDataDirectory = string.Empty;
-    private string _deviceIdentityNote = string.Empty;
     private bool _useSteam = true;
     private bool _persistent;
     private bool _isBusy = true;
@@ -58,6 +57,8 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             if (SetField(ref _selectedServer, value))
             {
                 OnPropertyChanged(nameof(CanPlay));
+                OnPropertyChanged(nameof(PlayButtonText));
+                OnPropertyChanged(nameof(CanOpenModPack));
                 OnPropertyChanged(nameof(CanManageOptionalMods));
                 OnPropertyChanged(nameof(OptionalModsText));
                 RaiseCommandStates();
@@ -104,12 +105,6 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
     public string DefaultModDataDirectory =>
         _runtime?.Paths.DataDirectory ?? ModDataDirectory;
 
-    public string DeviceIdentityNote
-    {
-        get => _deviceIdentityNote;
-        private set => SetField(ref _deviceIdentityNote, value);
-    }
-
     public bool UseSteam
     {
         get => _useSteam;
@@ -142,6 +137,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             if (SetField(ref _isBusy, value))
             {
                 OnPropertyChanged(nameof(CanPlay));
+                OnPropertyChanged(nameof(CanOpenModPack));
                 RaiseCommandStates();
             }
         }
@@ -165,6 +161,13 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         && SelectedServer is not null
         && (SelectedServer.ModPackId <= 0
             || (_runtime?.ModPacks.GetState(SelectedServer.ModPackId).IsVerified ?? false));
+
+    public bool CanOpenModPack => !IsBusy && SelectedServer?.ModPackId > 0;
+
+    public string PlayButtonText => SelectedServer?.ModPackId > 0
+        && !(_runtime?.ModPacks.GetState(SelectedServer.ModPackId).IsRecentlyVerified ?? false)
+            ? "Verify & Play"
+            : "Play";
 
     public bool CanManageOptionalMods =>
         SelectedServer?.ModPackId > 0
@@ -198,11 +201,6 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             _persistent = _preferences.Persistent;
             OnPropertyChanged(nameof(UseSteam));
             OnPropertyChanged(nameof(Persistent));
-
-            DeviceIdentity identity = _runtime.DeviceIdentity;
-            DeviceIdentityNote = identity.IsFallback
-                ? "A generated fallback device ID is in use because no OS machine identifier was available."
-                : $"Device identity source: {identity.Source}.";
 
             string? postUpdatePlan = LauncherStartup.Current.PostUpdatePlan;
             if (!string.IsNullOrWhiteSpace(postUpdatePlan))
@@ -348,14 +346,20 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             return;
         }
 
-        await _runtime.ModPacks.SetOptionalEnabledAsync(
-            SelectedServer.ModPackId,
-            name,
-            enabled,
-            _shutdown.Token);
-        OnPropertyChanged(nameof(OptionalModsText));
-        OnPropertyChanged(nameof(CanPlay));
-        RaiseCommandStates();
+        try
+        {
+            await _runtime.ModPacks.SetOptionalEnabledAsync(
+                SelectedServer.ModPackId,
+                name,
+                enabled,
+                _shutdown.Token);
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(OptionalModsText));
+            OnPropertyChanged(nameof(PlayButtonText));
+            OnPropertyChanged(nameof(CanManageOptionalMods));
+        }
     }
 
     public Task ReverifySelectedAsync() => RunOperationAsync(VerifySelectedCoreAsync);
@@ -474,6 +478,12 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 
             GameDirectory = gameValidation.NormalizedPath;
             ModDataDirectory = dataValidation.NormalizedPath;
+            // A verified modpack belongs to the old data directory.
+            foreach (ServerItemViewModel server in Servers.Where(item => item.ModPackId > 0))
+            {
+                _runtime.ModPacks.GetState(server.ModPackId).SetVerified(false);
+            }
+            OnPropertyChanged(nameof(PlayButtonText));
             _preferences = _preferences with
             {
                 GameDirectory = GameDirectory,
@@ -489,12 +499,21 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
         }
     }
 
-    public Task OpenModDataDirectoryAsync() =>
-        RunOperationAsync(OpenModDataDirectoryCoreAsync);
+    public Task OpenGameDirectoryAsync() =>
+        RunOperationAsync(async () =>
+        {
+            if (_runtime is not null)
+            {
+                await _runtime.Shell.OpenFolderAsync(GameDirectory, _shutdown.Token);
+            }
+        });
 
-    private async Task OpenModDataDirectoryCoreAsync()
+    public Task OpenModPackDirectoryAsync() =>
+        RunOperationAsync(OpenModPackDirectoryCoreAsync);
+
+    private async Task OpenModPackDirectoryCoreAsync()
     {
-        if (_runtime is null)
+        if (_runtime is null || SelectedServer?.ModPackId is not > 0)
         {
             return;
         }
@@ -508,7 +527,11 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             throw new LauncherException(validation.Error!);
         }
 
-        await _runtime.Shell.OpenFolderAsync(validation.NormalizedPath, _shutdown.Token);
+        string packRoot = ModPackService.GetPackRoot(
+            validation.NormalizedPath,
+            SelectedServer.ModPackId);
+        Directory.CreateDirectory(packRoot);
+        await _runtime.Shell.OpenFolderAsync(packRoot, _shutdown.Token);
     }
 
     private async Task RefreshServersCoreAsync(bool initial)
@@ -583,18 +606,24 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
             throw new LauncherException(dataValidation.Error!);
         }
 
-        var progress = new Progress<LauncherProgress>(UpdateProgress);
-        await _runtime.ModPacks.EnsureVerifiedAsync(
-            SelectedServer.ModPackId,
-            dataValidation.NormalizedPath,
-            _runtime.Servers.IsAdmin,
-            progress,
-            _shutdown.Token);
-        IsProgressVisible = false;
-        OnPropertyChanged(nameof(CanPlay));
-        OnPropertyChanged(nameof(CanManageOptionalMods));
-        OnPropertyChanged(nameof(OptionalModsText));
-        RaiseCommandStates();
+        try
+        {
+            var progress = new Progress<LauncherProgress>(UpdateProgress);
+            await _runtime.ModPacks.EnsureVerifiedAsync(
+                SelectedServer.ModPackId,
+                dataValidation.NormalizedPath,
+                _runtime.Servers.IsAdmin,
+                progress,
+                _shutdown.Token);
+        }
+        finally
+        {
+            IsProgressVisible = false;
+            OnPropertyChanged(nameof(PlayButtonText));
+            OnPropertyChanged(nameof(CanManageOptionalMods));
+            OnPropertyChanged(nameof(OptionalModsText));
+            RaiseCommandStates();
+        }
     }
 
     private async Task PlayCoreAsync()
@@ -612,20 +641,31 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 
         if (SelectedServer.ModPackId > 0)
         {
-            await VerifySelectedCoreAsync();
+            
         }
 
-        SteamInstallation? steam = await _runtime.Steam.DiscoverAsync(_shutdown.Token);
-        if (!SteamBuildCompatibility.IsCompatible(steam?.BuildId, SelectedServer.SteamBuildId))
+        IReadOnlyList<GameServer> currentServers = await _runtime.Servers.RefreshAsync(_shutdown.Token);
+        var currentServer = currentServers.FirstOrDefault(server =>
+                server.WorldName == SelectedServer.WorldName && server.ModPackId == SelectedServer.ModPackId)
+            ?? throw new LauncherException("The selected server is no longer available. Refresh the server list and select a server.");
+
+        SteamInstallation? steam = await _runtime.Steam.RefreshAsync(_shutdown.Token);
+        if (!SteamBuildCompatibility.IsCompatible(steam?.BuildId, currentServer.SteamBuildId))
         {
             throw new LauncherException(
-                $"Valheim build {steam?.BuildId} does not match server build {SelectedServer.SteamBuildId}. Update the game in Steam first.");
+                $"Valheim build {steam?.BuildId} does not match server build {currentServer.SteamBuildId}. Update the game in Steam first.");
+        }
+
+        if (currentServer.ModPackId > 0
+            && !_runtime.ModPacks.GetState(currentServer.ModPackId).IsRecentlyVerified)
+        {
+            await VerifySelectedCoreAsync();
         }
 
         var request = new GameLaunchRequest(
             GameDirectory,
             ModDataDirectory,
-            SelectedServer.ModPackId,
+            currentServer.ModPackId,
             UseSteam,
             Persistent);
         var progress = new Progress<LauncherProgress>(UpdateProgress);
@@ -718,11 +758,19 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 
     private async Task RefreshLoopAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        int secondsUntilRefresh = 30;
         try
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
+                OnPropertyChanged(nameof(PlayButtonText));
+                if (--secondsUntilRefresh > 0)
+                {
+                    continue;
+                }
+
+                secondsUntilRefresh = 30;
                 if (IsBusy)
                 {
                     continue;

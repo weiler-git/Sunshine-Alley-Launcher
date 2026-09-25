@@ -49,11 +49,19 @@ public sealed partial class MainWindow : Window
         await window.ShowDialog(this);
     }
 
+    private async void OpenGameDirectory_Click(object? sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            await viewModel.OpenGameDirectoryAsync();
+        }
+    }
+
     private async void OpenData_Click(object? sender, RoutedEventArgs eventArgs)
     {
         if (DataContext is MainWindowViewModel viewModel)
         {
-            await viewModel.OpenModDataDirectoryAsync();
+            await viewModel.OpenModPackDirectoryAsync();
         }
     }
 }

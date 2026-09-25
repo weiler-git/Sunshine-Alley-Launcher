@@ -11,16 +11,25 @@ public sealed class SteamService : ISteamService
     private readonly SemaphoreSlim _discoveryGate = new(1, 1);
     private SteamInstallation? _cached;
 
-    public async Task<SteamInstallation?> DiscoverAsync(
-        CancellationToken cancellationToken = default)
+    public Task<SteamInstallation?> DiscoverAsync(CancellationToken cancellationToken = default) =>
+        DiscoverCoreAsync(false, cancellationToken);
+
+    public Task<SteamInstallation?> RefreshAsync(CancellationToken cancellationToken = default) =>
+        DiscoverCoreAsync(true, cancellationToken);
+
+    private async Task<SteamInstallation?> DiscoverCoreAsync(
+        bool refresh,
+        CancellationToken cancellationToken)
     {
         await _discoveryGate.WaitAsync(cancellationToken);
         try
         {
-            if (_cached is not null)
+            if (!refresh && _cached is not null)
             {
                 return _cached;
             }
+
+            _cached = null;
 
             foreach ((string root, string? executable) in GetSteamCandidates())
             {

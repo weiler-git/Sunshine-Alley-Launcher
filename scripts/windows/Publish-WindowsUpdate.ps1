@@ -27,9 +27,6 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrWhiteSpace($MinimumSupportedVersion)) {
-    $MinimumSupportedVersion = $null
-}
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $Solution = Join-Path $ProjectRoot 'Sunshine Alley Launcher.sln'
 $AppProject = Join-Path $ProjectRoot 'src/SunshineAlley.App/SunshineAlley.App.csproj'
