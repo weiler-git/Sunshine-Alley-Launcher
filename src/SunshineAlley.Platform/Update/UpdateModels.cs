@@ -24,6 +24,13 @@ public sealed record VerifiedUpdateEnvelope(
 
 internal static class LauncherUpdatePolicy
 {
+    public static bool IsAllowedReleaseId(
+        long offeredReleaseId,
+        long failedReleaseId,
+        long highestReleaseId) =>
+        offeredReleaseId > 0
+        && offeredReleaseId >= Math.Max(failedReleaseId, highestReleaseId);
+
     public static bool IsCurrentVersionUnsupported(
         SunshineAlley.Core.LauncherUpdateManifest manifest,
         string currentVersion)

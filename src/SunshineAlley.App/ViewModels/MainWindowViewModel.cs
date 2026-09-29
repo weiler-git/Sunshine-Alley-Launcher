@@ -216,7 +216,7 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
 
             if (LauncherStartup.Current.WasUpdateRollback)
             {
-                Notice = "The previous launcher update did not complete; the previous launcher was retained or restored.";
+                Notice = "The previous launcher update did not complete; the previous launcher was retained or restored. The offered update will be retried on the next normal launcher start.";
                 string? rolledBackPlan = LauncherStartup.Current.RolledBackUpdatePlan;
                 if (!string.IsNullOrWhiteSpace(rolledBackPlan))
                 {
@@ -225,7 +225,6 @@ public sealed class MainWindowViewModel : ViewModelBase, IAsyncDisposable
                         await _runtime.Updates.RecordRolledBackUpdateAsync(
                             rolledBackPlan,
                             _shutdown.Token);
-                        Notice += " That release ID is blocked until a newer release is published.";
                     }
                     catch (Exception exception) when (exception is not OperationCanceledException)
                     {

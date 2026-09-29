@@ -146,7 +146,12 @@ public sealed class LauncherUpdateService
                 manifest.Channel,
                 manifest.RuntimeIdentifier),
             cancellationToken) ?? 0;
-        if (manifest.ReleaseId < Math.Max(failedRelease, highestRelease))
+        // The signed release currently offered may be retried on each normal
+        // launcher start. Only IDs older than one already seen are rejected.
+        if (!LauncherUpdatePolicy.IsAllowedReleaseId(
+            manifest.ReleaseId,
+            failedRelease,
+            highestRelease))
         {
             throw new LauncherException(
                 $"Rejected replayed release ID {manifest.ReleaseId}; this installation has already seen a newer release policy or executable.");
@@ -196,22 +201,6 @@ public sealed class LauncherUpdateService
                     : "The launcher is up to date.",
                 currentVersion,
                 mandatory);
-        }
-
-        if (manifest.ReleaseId <= failedRelease)
-        {
-            return new LauncherUpdateCheckResult(
-                true,
-                false,
-                $"Launcher release {manifest.ReleaseId} previously failed startup and will not be retried. Publish a corrected build with a higher release ID.",
-                manifest.Version,
-                mandatory);
-        }
-
-        if (manifest.ReleaseId <= highestRelease)
-        {
-            throw new LauncherException(
-                $"Rejected replayed or downgraded release ID {manifest.ReleaseId}; this installation has already accepted {highestRelease}.");
         }
 
         LauncherUpdatePackage package = manifest.Package!;

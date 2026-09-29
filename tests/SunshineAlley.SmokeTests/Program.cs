@@ -32,6 +32,7 @@ internal static class Program
             LinuxXdgLayouts(temporaryRoot);
             LinuxDesktopEntry();
             MandatoryUpdatePolicy();
+            ReleaseRetryPolicy();
             LinuxInstallDetection(temporaryRoot);
             LinuxUpdateReplacement(temporaryRoot);
             WindowsDefaultLayout();
@@ -394,6 +395,31 @@ internal static class Program
                 remembered,
                 "3.1.9"),
             "A remembered signed minimum-supported floor must not be lowered by replay.");
+    }
+
+    private static void ReleaseRetryPolicy()
+    {
+        Assert(
+            LauncherUpdatePolicy.IsAllowedReleaseId(3, 3, 0),
+            "The offered failed release must be retryable on the next launch.");
+        Assert(
+            LauncherUpdatePolicy.IsAllowedReleaseId(3, 3, 3),
+            "The same ID must remain retryable even if it was recorded before failure.");
+        Assert(
+            LauncherUpdatePolicy.IsAllowedReleaseId(3, 0, 3),
+            "The currently offered ID must not require a rollback marker to be retried.");
+        Assert(
+            !LauncherUpdatePolicy.IsAllowedReleaseId(3, 3, 4),
+            "An offered release below an accepted release must not be accepted.");
+        Assert(
+            !LauncherUpdatePolicy.IsAllowedReleaseId(2, 3, 0),
+            "A release below a previously failed release must not be accepted.");
+        Assert(
+            LauncherUpdatePolicy.IsAllowedReleaseId(4, 3, 0),
+            "A newer release must remain accepted.");
+        Assert(
+            !LauncherUpdatePolicy.IsAllowedReleaseId(0, 0, 0),
+            "The zero release ID must never qualify as a retry.");
     }
 
     private static void LinuxInstallDetection(string root)
